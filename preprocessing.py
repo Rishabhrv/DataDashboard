@@ -10,8 +10,8 @@ import numpy as np
 from datetime import datetime
 from google.oauth2.service_account import Credentials
 
-creds_path = os.getenv('CREDS_PATH', r"E:\Rishabh\Datadashboard\token.json")
-sheets_json_path = os.getenv('SHEETS_JSON_PATH', r"E:\Rishabh\Datadashboard\sheets.json")
+creds_path = os.getenv('CREDS_PATH', "token.json")
+sheets_json_path = os.getenv('SHEETS_JSON_PATH', "sheets.json")
 
 def read_sheets_from_json():
     if os.path.exists(sheets_json_path):
