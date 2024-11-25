@@ -6,10 +6,6 @@ import pandas as pd
 from datetime import datetime
 import time
 import numpy as np
-
-import os
-
-import json
 from preprocessing import *
 import datetime
 
@@ -47,23 +43,22 @@ df['Date'] = df['Date'].ffill()
 df['Book ID'] = df['Book ID'].ffill()
 df = df[df['Date'].dt.year == 2024]
 
-# Streamlit layout
-#st.title("Books Dashboard")
-
 # Month selector based on available months in the dataset
 df['Month'] = df['Date'].dt.strftime('%B')  # Format to full month names
-unique_months = df['Month'].unique()  # Get unique month names
+unique_months = df['Month'].unique() 
+from datetime import datetime
+unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
 
 # Map month numbers to month names and set the order
 month_order = [
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
 ]
-from datetime import datetime
-with st.sidebar:
-    selected_month = st.sidebar.selectbox("Select Month", sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")),index = 9)
+selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", default =unique_months_sorted[-1],label_visibility ='collapsed')
 
+######################################################################################
 #####################----------- Metrics of September ----------######################
+######################################################################################
 
 # Filter DataFrame based on selected month
 filtered_df = df[df['Date'].dt.strftime('%B') == selected_month]
@@ -91,9 +86,29 @@ books_printed_false = filtered_df[filtered_df['Print'] == 'FALSE']['Book ID'].nu
 books_delivered_true = filtered_df[filtered_df['Deliver'] == 'TRUE']['Book ID'].nunique()
 books_delivered_false = filtered_df[filtered_df['Deliver'] == 'FALSE']['Book ID'].nunique()
 
+import time
+
 st.subheader(f"Metrics of {selected_month}")
+
+# Create a placeholder for the status
+status_placeholder = st.empty()
+
+with status_placeholder.container():
+    with st.status("Fetching Data", expanded=True) as status:
+        time.sleep(1)
+        st.write("Calling Google Sheet API..")
+        time.sleep(2)
+        st.write("Processing Data..")
+        time.sleep(2)
+        st.write("Plotting Graphs..")
+        time.sleep(1)
+        status.update(
+            label="Data Loaded!", state="complete", expanded=False)
+
+# Replace the status element with an empty container to "hide" it
+status_placeholder.empty()
+
 with st.container():
-   
     # Display metrics with TRUE counts in value and FALSE counts in delta
     col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
     col1.metric("Total Books", total_books)
@@ -106,13 +121,20 @@ with st.container():
     col8.metric("Printed", books_printed_true, delta=f"-{total_books - books_printed_true} not printed")
     col9.metric("Delivered", books_delivered_true, delta=f"-{total_books - books_delivered_true} not delivered")
 
-#####################----------- Spinner ----------######################
+
+######################################################################################
+###########################----------- Spinner ----------#############################
+######################################################################################
 
 
-with st.spinner('Loading Data...'):
-    time.sleep(4)
+# with st.spinner('Loading Data...'):
+#     time.sleep(4)
 
-####################----------- Dataframe current status ----------------###################
+
+
+######################################################################################
+####################----------- Dataframe current status -------------###################
+######################################################################################
 
 # Define conditions in a dictionary, including columns to select for each case
 conditions = {
@@ -199,6 +221,7 @@ def proofread_remaining(data):
 
     return data,proof_remaining
 
+
 writing_remaining_data,writing_remaining_count = writing_remaining(track_sheet_data_bystart)
 proofread_remaining_data,proofread_remaining_count = proofread_remaining(track_sheet_data_bystart)
 
@@ -242,14 +265,15 @@ with col2:
     )
     st.dataframe(proofread_remaining_data, use_container_width=False, hide_index=True)
 
-######################------------- 45 days data----------------#########################
 
-
+######################################################################################
+######################------------- 40 days data-------------#########################
+######################################################################################
 
 operations_sheet_data_pre = process_book_timings(operations_sheet_data, by_col = 'Date')
 import datetime
 today = datetime.date.today()
-forty_five_days_ago = today - datetime.timedelta(days=45)
+forty_five_days_ago = today - datetime.timedelta(days=40)
 
 operations_sheet_data_pre['Date'] = operations_sheet_data_pre['Date'].dt.date
 
@@ -287,7 +311,7 @@ fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month
 
 # Display the last 45 days data section with count, emoji, and title
 st.markdown(
-    f"<h4>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 45 days"
+    f"<h4>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
     f"<span class='status-badge'>Status: On Hold</span></h4>", 
     unsafe_allow_html=True
 )
@@ -325,7 +349,10 @@ with col2:
 
 
 
+####################################################################################################
 #####################-----------  Line Chart Monthly Books & Authors ----------######################
+###################################################################################################
+
 
 # Group by month and count unique 'Book ID's and 'Author ID's
 monthly_counts = df.groupby(df['Date'].dt.month).agg({
@@ -384,33 +411,9 @@ text_authors = line_chart_authors.mark_text(
 )
 st.altair_chart((line_chart + text_books + line_chart_authors + text_authors), use_container_width=True)
 
-
+#####################################################################################################
 #####################-----------  Bar chart Number of Books in Month ----------######################
-
-
-def create_grouped_bar_chart(data, title, color_scheme):
-    # Main bar chart with grouped bars
-    bars = alt.Chart(data).mark_bar().encode(
-        x=alt.X('Category:N', title=None, axis=alt.Axis(labelAngle=-65, labelOverlap="greedy"),scale=alt.Scale(padding=0.2)),
-        y=alt.Y('Count:Q', title='Count'),
-        color=alt.Color('Status:N', scale=alt.Scale(range=color_scheme), legend=alt.Legend(title="Status")),
-        xOffset='Status:N'  # Offset by 'Status' for grouping effect
-    ).properties(
-        width=300,  
-        height=400,
-        title=title
-    )
-    
-    # Text labels on each bar
-    text = bars.mark_text(
-        align='center',
-        baseline='bottom',
-        dy=-5
-    ).encode(
-        text='Count:Q'
-    )
-    
-    return bars + text
+####################################################################################################
 
 
 # Count both TRUE and FALSE values for each relevant column
@@ -438,8 +441,9 @@ counts = {
 
 bar_data_df = pd.DataFrame(counts).melt(id_vars="Category", var_name="Status", value_name="Count")
 
-
+######################################################################################################
 #####################-----------  Bar chart Number of Authors in Month ----------######################
+######################################################################################################
 
 
 # Count both TRUE and FALSE values for each relevant column (Authors Data)
@@ -486,8 +490,9 @@ with st.container():
     with col2:
         st.altair_chart(author_bar_chart, use_container_width=True)
 
-
-###################------------- Horizonrtal bar graph Employee Performance----------##################3
+#######################################################################################################
+###################------------- Horizonrtal bar graph Employee Performance----------##################
+#######################################################################################################
 
 # Sample data preparation (replace with your actual data)
 # Monthly data for a specific month
@@ -549,8 +554,9 @@ with col1:
 with col2:
     st.altair_chart(yearly_chart, use_container_width=True)
 
-
+######################################################################################
 ###############------------- Bar Chart Formatting & Proofread -----------############
+######################################################################################
 
 proofreading_num = filtered_proofreading_data.groupby('Proofreading By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
 proofreading_num.columns = ['Proofreader', 'Book Count']
@@ -609,7 +615,9 @@ with col1:
 with col2:
     st.altair_chart(formatting_chart, use_container_width=True)
 
+######################################################################################################################
 #####################-----------  Bar chart Number of Monthly Books & Authors in 2024 ----------######################
+######################################################################################################################
 
 # Group by month and count unique 'Book ID's
 monthly_book_counts =  df[df['Book ID'] != ''].groupby(df['Date'].dt.month)['Book ID'].nunique().reset_index()
@@ -679,7 +687,10 @@ with st.container():
     with col2:
         st.altair_chart(author_chart + author_text, use_container_width=True)
 
+
+###################################################################################################################
 #####################----------- Pie Books and Authors added by Publishing Consultan----------######################
+#####################################################################################################################
 
 # Number of books sold by Publishing Consultant
 books_sold = filtered_df.groupby(['Publishing Consultant'])['Book ID'].nunique().reset_index(name='Books Sold').iloc[1:]
@@ -719,4 +730,3 @@ with col1:
 with col2:
     st.plotly_chart(fig_authors_added, use_container_width=True)
     
-

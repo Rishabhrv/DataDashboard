@@ -2,6 +2,7 @@ import json
 import os
 import pandas as pd
 import datetime
+import altair as alt
 
 import gspread
 import warnings
@@ -22,6 +23,10 @@ def read_sheets_from_json():
 scope = ["https://www.googleapis.com/auth/spreadsheets"]
 credentials = Credentials.from_service_account_file(creds_path, scopes = scope)
 gc = gspread.authorize(credentials)
+
+######################################################################################
+#####################------------Data Fetch Helper functions--------------############
+######################################################################################
 
 # Fetch data from a Google Sheet
 def sheet_to_df(sheet_id):
@@ -82,6 +87,11 @@ def track_writing_sheet_preproces(df, by_col = 'Date'):
     df['Month'] = df[by_col].dt.strftime('%B')
 
     return df
+
+
+######################################################################################
+######################------------- 45 days data-------------#########################
+######################################################################################
 
 def process_book_timings(data, by_col='Date'):
     """
@@ -159,3 +169,32 @@ def process_book_timings(data, by_col='Date'):
     data = data.fillna('Pending')
 
     return data
+
+#####################################################################################################
+#####################-----------  Bar chart Number of Books in Month ----------######################
+####################################################################################################
+
+
+def create_grouped_bar_chart(data, title, color_scheme):
+    # Main bar chart with grouped bars
+    bars = alt.Chart(data).mark_bar().encode(
+        x=alt.X('Category:N', title=None, axis=alt.Axis(labelAngle=-65, labelOverlap="greedy"),scale=alt.Scale(padding=0.2)),
+        y=alt.Y('Count:Q', title='Count'),
+        color=alt.Color('Status:N', scale=alt.Scale(range=color_scheme), legend=alt.Legend(title="Status")),
+        xOffset='Status:N'  # Offset by 'Status' for grouping effect
+    ).properties(
+        width=300,  
+        height=400,
+        title=title
+    )
+    
+    # Text labels on each bar
+    text = bars.mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-5
+    ).encode(
+        text='Count:Q'
+    )
+    
+    return bars + text
