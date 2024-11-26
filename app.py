@@ -24,7 +24,7 @@ writing_sheet_data = fetch_writing_sheet_data(sheets['Writing'])
 operations_sheet_data = sheet_to_df(sheets['Operations'])
 df = sheet_to_df(sheets['Mastersheet'])
 
-
+operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
 track_sheet_data_bystart = track_writing_sheet_preproces(track_sheet_data)
 track_sheet_data_byend = track_writing_sheet_preproces(track_sheet_data, by_col = 'Writing Date')
 writing_sheet_data = track_writing_sheet_preproces(writing_sheet_data)
@@ -133,27 +133,32 @@ with st.container():
 
 
 ######################################################################################
-####################----------- Dataframe current status -------------###################
+####################----------- Current Working status dataframe -------------########
 ######################################################################################
 
 # Define conditions in a dictionary, including columns to select for each case
 conditions = {
-    'Formatting': {
+    'Formating': {
         'by': ['Akash', 'Anush', 'Surendra', 'Rahul'],
-        'status': 'Formatting Status',
-        'columns': ['Book ID', 'Book Title', 'Month', 'Formatting By', 'Formatting Date', 'Writing By', 'Writing Date', 'Proofreading By', 'Proofreading Date']
+        'status': 'Formating Complete',
+        'columns': ['Book ID', 'Book Title', 'Date','Month','Since Enrolled', 'Formating By', 'Formating Start Date', 'Formating Start Time',
+       'Formating End Date', 'Formating End Time','Proofreading By','Proofreading Start Date', 'Proofreading Start Time',
+       'Proofreading End Date', 'Proofreading End Time','Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
+       'Writing End Time']
     },
     'Proofreading': {
         'by': ['Umer', 'Publish Only', 'Barnali', 'Sheetal', 'Rakesh', 'Aman', 'Minakshi', 'Vaibhavi'],
-        'status': 'Proofreading Status',
-        'columns': ['Book ID', 'Book Title', 'Month', 'Proofreading By', 'Writing By', 'Writing Date']
+        'status': 'Proofreading Complete',
+        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled', 'Proofreading By','Proofreading Start Date', 'Proofreading Start Time',
+       'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
+       'Writing End Time']
     },
     'Writing': {
         'by': ['Vaibhavi', 'Vaibhav', 'Rakesh', 'Sheetal', 'Urvashi', 'Shravani', 
                'Publish Only', 'Minakshi', 'Preeti', 'Muskan', 'Bhavana', 'Aman', 
                'Sachin', 'muskan'],
-        'status': 'Writing Status',
-        'columns': ['Book ID', 'Book Title', 'Month', 'Writing By']
+        'status': 'Writing Complete',
+        'columns': ['Book ID', 'Book Title','Date', 'Month', 'Since Enrolled','Writing By','Writing Start Date', 'Writing Start Time']
     }
 }
 
@@ -162,7 +167,7 @@ conditions = {
 results = {}
 for key, cond in conditions.items():
     # Filter the data and select columns, creating a copy to avoid modifying the original DataFrame
-    current_data = track_sheet_data_bystart[(track_sheet_data_bystart[f'{key} By'].isin(cond['by'])) & (track_sheet_data_bystart[cond['status']] == 'FALSE')][cond['columns']].copy()
+    current_data = operations_sheet_data_preprocess[(operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & (operations_sheet_data_preprocess[cond['status']] == 'FALSE')][cond['columns']].copy()
     
     # Format 'Date' columns in the copy to remove the time part
     date_columns = [col for col in current_data.columns if 'Date' in col]
@@ -192,7 +197,7 @@ st.markdown("""
 status_messages = [
     {"emoji": "✍️", "label": "Writing", "count": len(results['Writing']), "data": results['Writing']},
     {"emoji": "📖", "label": "Proofreading", "count": len(results['Proofreading']), "data": results['Proofreading']},
-    {"emoji": "🖋️", "label": "Formatting", "count": len(results['Formatting']), "data": results['Formatting']}
+    {"emoji": "🖋️", "label": "Formatting", "count": len(results['Formating']), "data": results['Formating']}
 ]
 
 # Display each status section with count, emoji, and data
@@ -205,10 +210,29 @@ for status in status_messages:
     st.dataframe(status['data'], use_container_width=True, hide_index=True)
 
 
+######################################################################################
+###############----------- Current day status dataframe -------------################
+######################################################################################
+
+work_done_status = work_done_status(operations_sheet_data_preprocess)
+
+# Display the last 45 days data section with count, emoji, and title
+st.markdown(
+    f"<h4>✅ Work done on {work_done_status['Book ID'].nunique()} Books on Previous day & Today"
+    f"<span class='status-badge'>Status: Done!</span></h4>", 
+    unsafe_allow_html=True)
+
+st.dataframe(work_done_status, use_container_width=False, hide_index=True)
+
+######################################################################################
+###############----------- Work Remaining status dataframe -------------################
+######################################################################################
+
+
 def writing_remaining(data):
 
     data['Writing By'] = data['Writing By'].fillna('Pending')
-    data = data[data['Writing Status'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Month','Writing By']]
+    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','Writing By']]
     writing_remaining = data['Book ID'].nunique() - len(results['Writing'])
 
     return data,writing_remaining
@@ -216,14 +240,16 @@ def writing_remaining(data):
 def proofread_remaining(data):
 
     data['Proofreading By'] = data['Proofreading By'].fillna('Pending')
-    data = data[(data['Writing Status'] == 'TRUE') & (data['Proofreading Status'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Month','Writing Date','Proofreading By']]
+    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','Writing By',
+                                                                                                    'Writing Start Date', 'Writing Start Time', 'Writing End Date',
+                                                                                                    'Writing End Time','Proofreading By']]
     proof_remaining = data['Book ID'].nunique() - len(results['Proofreading'])
 
     return data,proof_remaining
 
 
-writing_remaining_data,writing_remaining_count = writing_remaining(track_sheet_data_bystart)
-proofread_remaining_data,proofread_remaining_count = proofread_remaining(track_sheet_data_bystart)
+writing_remaining_data,writing_remaining_count = writing_remaining(operations_sheet_data_preprocess)
+proofread_remaining_data,proofread_remaining_count = proofread_remaining(operations_sheet_data_preprocess)
 
 # CSS for the "Status" badge style
 st.markdown("""
@@ -270,15 +296,20 @@ with col2:
 ######################------------- 40 days data-------------#########################
 ######################################################################################
 
-operations_sheet_data_pre = process_book_timings(operations_sheet_data, by_col = 'Date')
 import datetime
+
+# Calculate today and 45 days ago as datetime.date objects
 today = datetime.date.today()
-forty_five_days_ago = today - datetime.timedelta(days=40)
+forty_five_days_ago = pd.Timestamp(today - datetime.timedelta(days=40))  # Convert to pandas Timestamp
 
-operations_sheet_data_pre['Date'] = operations_sheet_data_pre['Date'].dt.date
+# Filter the DataFrame
+fortifiveday = operations_sheet_data_preprocess[
+    operations_sheet_data_preprocess['Date'] <= forty_five_days_ago
+]
 
-fortifiveday = operations_sheet_data_pre[operations_sheet_data_pre['Date'] <= forty_five_days_ago]
+# Further filter the DataFrame based on the 'Deliver' column
 fortifiveday_status = fortifiveday[fortifiveday['Deliver'] == 'FALSE']
+
 
 # Define the columns in processing order and their readable names
 status_columns = {
@@ -301,12 +332,9 @@ def find_stuck_stage(row):
 # Apply the function to create a 'Stuck Stage' column
 fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_stage, axis=1)
 
-from datetime import datetime
-fortifiveday_status['Date'] = pd.to_datetime(fortifiveday_status['Date'], format="%d/%m/%Y", errors='coerce')
-fortifiveday_status['Since Enrolled'] = (datetime.now() - fortifiveday_status['Date']).dt.days
-
-fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled','Reason For Hold','Writing End Datetime', 'Proofreading End Datetime',
-    'Formatting End Datetime','Send Cover Page and Agreement', 'Agreement Recieved', 'Digital Prof','Confirmation', 'Ready to Print']]
+fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
+                                           'Reason For Hold','Writing End Date','Proofreading End Date','Formating End Time','Send Cover Page and Agreement', 'Agreement Recieved',
+                                             'Digital Prof','Confirmation', 'Ready to Print']].fillna("Pending")
 
 
 # Display the last 45 days data section with count, emoji, and title
