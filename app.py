@@ -19,33 +19,13 @@ st.set_page_config(
 sheets = read_sheets_from_json()
 
 # Load data and preprocess
-track_sheet_data = fetch_track_sheet_data(sheets['Track Sheet'])
-writing_sheet_data = fetch_writing_sheet_data(sheets['Writing'])
 operations_sheet_data = sheet_to_df(sheets['Operations'])
-df = sheet_to_df(sheets['Mastersheet'])
+mastersheet_data = sheet_to_df(sheets['Mastersheet'])
 
 operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
-track_sheet_data_bystart = track_writing_sheet_preproces(track_sheet_data)
-track_sheet_data_byend = track_writing_sheet_preproces(track_sheet_data, by_col = 'Writing Date')
-writing_sheet_data = track_writing_sheet_preproces(writing_sheet_data)
-formatting_data = track_writing_sheet_preproces(track_sheet_data, by_col = 'Formatting Date')
-proofreading_data = track_writing_sheet_preproces(track_sheet_data, by_col = 'Proofreading Date')
+mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
 
-cols = ['Date','Book ID', 'Writing', 'Apply ISBN', 'ISBN', 'Cover Page', 'Back Page Update', 'Ready to Print','Print',
-        'Amazon Link', 'AGPH Link', 'Google Link', 'Flipkart Link','Final Mail', 'Deliver', 'Google Review' ]
-
-for i in cols:
-    df[i] = df[i].shift(-1)
-
-df['Date'] = pd.to_datetime(df['Date'],  format= "%d/%m/%Y")
-df['Book ID'] = pd.to_numeric(df['Book ID'], errors='coerce')
-df['Date'] = df['Date'].ffill()
-df['Book ID'] = df['Book ID'].ffill()
-df = df[df['Date'].dt.year == 2024]
-
-# Month selector based on available months in the dataset
-df['Month'] = df['Date'].dt.strftime('%B')  # Format to full month names
-unique_months = df['Month'].unique() 
+unique_months = operations_sheet_data_preprocess['Month'].unique() 
 from datetime import datetime
 unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
 
@@ -54,37 +34,34 @@ month_order = [
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
 ]
+
 selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", default =unique_months_sorted[-1],label_visibility ='collapsed')
 
 ######################################################################################
-#####################----------- Metrics of September ----------######################
+#####################----------- Metrics of Selected Month ----------######################
 ######################################################################################
 
 # Filter DataFrame based on selected month
-filtered_df = df[df['Date'].dt.strftime('%B') == selected_month]
-filtered_track_sheet_data_bystart = track_sheet_data_bystart[track_sheet_data_bystart['Date'].dt.strftime('%B') == selected_month]
-filtered_track_sheet_data_byend = track_sheet_data_byend[track_sheet_data_byend['Writing Date'].dt.strftime('%B') == selected_month]
-filtered_writing_sheet_data = writing_sheet_data[writing_sheet_data['Date'].dt.strftime('%B') == selected_month]
-filtered_proofreading_data = proofreading_data[proofreading_data['Proofreading Date'].dt.strftime('%B') == selected_month]
-filtered_formatting_data = formatting_data[formatting_data['Formatting Date'].dt.strftime('%B') == selected_month]
+mastersheet_data_preprocess_month = mastersheet_data_preprocess[mastersheet_data_preprocess['Date'].dt.strftime('%B') == selected_month]
+operations_sheet_data_preprocess_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Month']== selected_month]
 
 # Calculate metrics based on both TRUE and FALSE values in the filtered DataFrame
-total_books= len(np.array(filtered_df['Book ID'].unique())[np.array(filtered_df['Book ID'].unique()) !=''])
-total_authors = len(np.array(filtered_df['Author Id'].unique())[np.array(filtered_df['Author Id'].unique()) !=''])
-books_written_true = filtered_writing_sheet_data[filtered_writing_sheet_data['Writing Complete'] == 'TRUE']['Book ID'].nunique()
-books_written_false = filtered_writing_sheet_data[filtered_writing_sheet_data['Writing Complete'] == 'FALSE']['Book ID'].nunique()
-books_proofread_true = filtered_track_sheet_data_bystart[filtered_track_sheet_data_bystart['Proofreading Status'] == 'TRUE']['Book ID'].nunique()
-books_proofread_false = filtered_track_sheet_data_bystart[filtered_track_sheet_data_bystart['Proofreading Status'] == 'FALSE']['Book ID'].nunique()
-books_formatted_true = filtered_track_sheet_data_bystart[filtered_track_sheet_data_bystart['Formatting Status'] == 'TRUE']['Book ID'].nunique()
-books_formatted_false = filtered_track_sheet_data_bystart[filtered_track_sheet_data_bystart['Formatting Status'] == 'FALSE']['Book ID'].nunique()
-books_in_written_true = filtered_df[filtered_df['Writing'] == 'TRUE']['Book ID'].nunique()
-books_in_written_false = filtered_df[filtered_df['Writing'] == 'FALSE']['Book ID'].nunique()
-books_apply_isbn_true = filtered_df[filtered_df['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
-books_apply_isbn_false = filtered_df[filtered_df['Apply ISBN'] == 'FALSE']['Book ID'].nunique()
-books_printed_true = filtered_df[filtered_df['Print'] == 'TRUE']['Book ID'].nunique()
-books_printed_false = filtered_df[filtered_df['Print'] == 'FALSE']['Book ID'].nunique()
-books_delivered_true = filtered_df[filtered_df['Deliver'] == 'TRUE']['Book ID'].nunique()
-books_delivered_false = filtered_df[filtered_df['Deliver'] == 'FALSE']['Book ID'].nunique()
+
+total_authors = len(np.array(mastersheet_data_preprocess_month['Author Id'].unique())[np.array(mastersheet_data_preprocess_month['Author Id'].unique()) !=''])
+
+total_books= len(np.array(operations_sheet_data_preprocess_month['Book ID'].unique())[np.array(operations_sheet_data_preprocess_month['Book ID'].unique()) !=''])
+#total_authors = len(np.array(operations_sheet_data_preprocess_month['Author Id'].unique())[np.array(operations_sheet_data_preprocess_month['Author Id'].unique()) !=''])
+
+books_written_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] == 'TRUE']['Book ID'].nunique()
+books_proofread_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Proofreading Complete'] == 'TRUE']['Book ID'].nunique()
+books_formatted_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Formating Complete'] == 'TRUE']['Book ID'].nunique()
+
+
+books_complete = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Book Complete'] == 'TRUE']['Book ID'].nunique()
+#books_apply_isbn_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
+books_printed_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] == 'TRUE']['Book ID'].nunique()
+books_delivered_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
+books_apply_isbn_true = mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
 
 import time
 
@@ -94,7 +71,7 @@ st.subheader(f"Metrics of {selected_month}")
 status_placeholder = st.empty()
 
 with status_placeholder.container():
-    with st.status("Fetching Data", expanded=True) as status:
+    with st.status("Fetching Data", expanded=False) as status:
         time.sleep(1)
         st.write("Calling Google Sheet API..")
         time.sleep(2)
@@ -116,7 +93,7 @@ with st.container():
     col3.metric("Written", books_written_true, delta=f"-{total_books - books_written_true} Remaining")
     col4.metric("Proofread", books_proofread_true, delta=f"-{books_written_true - books_proofread_true} Remaining")
     col5.metric("Formatting", books_formatted_true, delta=f"-{books_proofread_true - books_formatted_true} Remaining")
-    col6.metric("Book Complete", books_in_written_true, delta=f"-{total_books - books_in_written_true} not complete")
+    col6.metric("Book Complete", books_complete, delta=f"-{total_books - books_complete} not complete")
     col7.metric("ISBN Received", books_apply_isbn_true, delta=f"-{total_books - books_apply_isbn_true} not received")
     col8.metric("Printed", books_printed_true, delta=f"-{total_books - books_printed_true} not printed")
     col9.metric("Delivered", books_delivered_true, delta=f"-{total_books - books_delivered_true} not delivered")
@@ -142,9 +119,8 @@ conditions = {
         'by': ['Akash', 'Anush', 'Surendra', 'Rahul'],
         'status': 'Formating Complete',
         'columns': ['Book ID', 'Book Title', 'Date','Month','Since Enrolled', 'Formating By', 'Formating Start Date', 'Formating Start Time',
-       'Formating End Date', 'Formating End Time','Proofreading By','Proofreading Start Date', 'Proofreading Start Time',
-       'Proofreading End Date', 'Proofreading End Time','Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
-       'Writing End Time']
+      'Proofreading By','Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date', 'Proofreading End Time',
+      'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']
     },
     'Proofreading': {
         'by': ['Umer', 'Publish Only', 'Barnali', 'Sheetal', 'Rakesh', 'Aman', 'Minakshi', 'Vaibhavi'],
@@ -383,7 +359,7 @@ with col2:
 
 
 # Group by month and count unique 'Book ID's and 'Author ID's
-monthly_counts = df.groupby(df['Date'].dt.month).agg({
+monthly_counts = mastersheet_data_preprocess.groupby(mastersheet_data_preprocess['Date'].dt.month).agg({
     'Book ID': 'nunique',
     'Author Id': 'nunique'
 }).reset_index()
@@ -448,22 +424,22 @@ st.altair_chart((line_chart + text_books + line_chart_authors + text_authors), u
 counts = {
     "Category": ["Writing", "Apply ISBN", "Cover Page", "Back Page Update", "Ready to Print", "Print", "Deliver"],
     "TRUE": [
-        filtered_df[filtered_df['Writing'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Apply ISBN'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Cover Page'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Back Page Update'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Ready to Print'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Print'] == 'TRUE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Deliver'] == 'TRUE']['Book ID'].nunique()
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Writing'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Cover Page'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Back Page Update'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Ready to Print'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Print'] == 'TRUE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
     ],
     "FALSE": [
-        filtered_df[filtered_df['Writing'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Apply ISBN'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Cover Page'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Back Page Update'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Ready to Print'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Print'] == 'FALSE']['Book ID'].nunique(),
-        filtered_df[filtered_df['Deliver'] == 'FALSE']['Book ID'].nunique()
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Writing'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Cover Page'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Back Page Update'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Ready to Print'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Print'] == 'FALSE']['Book ID'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Deliver'] == 'FALSE']['Book ID'].nunique()
     ]
 }
 
@@ -481,24 +457,24 @@ author_counts = {
         "Send Cover Page and Agreement", "Agreement Received", "Digital Prof", "Confirmation"
     ],
     "TRUE": [
-        filtered_df[filtered_df['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Author Detail'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Photo'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['ID Proof'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Agreement Recieved'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Confirmation'] == 'TRUE']['Author Id'].nunique()
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Author Detail'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Recieved'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
     ],
     "FALSE": [
-        filtered_df[filtered_df['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Author Detail'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Photo'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['ID Proof'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Agreement Recieved'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
-        filtered_df[filtered_df['Confirmation'] == 'FALSE']['Author Id'].nunique()
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Author Detail'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Recieved'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
     ]
 }
 
@@ -522,12 +498,12 @@ with st.container():
 ###################------------- Horizonrtal bar graph Employee Performance----------##################
 #######################################################################################################
 
-# Sample data preparation (replace with your actual data)
 # Monthly data for a specific month
-employee_monthly = filtered_track_sheet_data_byend.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
+operations_sheet_data_preprocess_writng_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%B') == selected_month]
+employee_monthly = operations_sheet_data_preprocess_writng_month.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
 # Full year data
-employee_yearly = track_sheet_data_byend.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
+employee_yearly = operations_sheet_data_preprocess.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
 # Altair chart for monthly data with layering of bars and text
 monthly_bars = alt.Chart(employee_monthly).mark_bar(color='#F3C623').encode(
@@ -586,10 +562,12 @@ with col2:
 ###############------------- Bar Chart Formatting & Proofread -----------############
 ######################################################################################
 
-proofreading_num = filtered_proofreading_data.groupby('Proofreading By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
+operations_sheet_data_preprocess_proof_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%B') == selected_month]
+proofreading_num = operations_sheet_data_preprocess_proof_month.groupby('Proofreading By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
 proofreading_num.columns = ['Proofreader', 'Book Count']
 # Formatting data
-formatting_num = filtered_formatting_data.groupby('Formatting By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
+operations_sheet_data_preprocess_format_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Formating End Date'].dt.strftime('%B') == 'November']
+formatting_num = operations_sheet_data_preprocess_format_month.groupby('Formating By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
 formatting_num.columns = ['Formatter', 'Book Count']
 
 # Create the bar chart for Proofreading
@@ -648,7 +626,7 @@ with col2:
 ######################################################################################################################
 
 # Group by month and count unique 'Book ID's
-monthly_book_counts =  df[df['Book ID'] != ''].groupby(df['Date'].dt.month)['Book ID'].nunique().reset_index()
+monthly_book_counts =  mastersheet_data_preprocess[mastersheet_data_preprocess['Book ID'] != ''].groupby(mastersheet_data_preprocess['Date'].dt.month)['Book ID'].nunique().reset_index()
 monthly_book_counts.columns = ['Month', 'Total Books']
 
 monthly_book_counts['Month'] = monthly_book_counts['Month'].apply(lambda x: month_order[x - 1])
@@ -658,7 +636,7 @@ monthly_book_counts['Month'] = pd.Categorical(monthly_book_counts['Month'], cate
 monthly_book_counts = monthly_book_counts.sort_values('Month')
 
 # Group by month and count unique 'Book ID's
-monthly_author_counts =  df[df['Author Id'] != ''].groupby(df['Date'].dt.month)['Author Id'].nunique().reset_index()
+monthly_author_counts =  mastersheet_data_preprocess[mastersheet_data_preprocess['Author Id'] != ''].groupby(mastersheet_data_preprocess['Date'].dt.month)['Author Id'].nunique().reset_index()
 monthly_author_counts.columns = ['Month', 'Total Authors']
 
 monthly_author_counts['Month'] = monthly_author_counts['Month'].apply(lambda x: month_order[x - 1])
@@ -721,10 +699,10 @@ with st.container():
 #####################################################################################################################
 
 # Number of books sold by Publishing Consultant
-books_sold = filtered_df.groupby(['Publishing Consultant'])['Book ID'].nunique().reset_index(name='Books Sold').iloc[1:]
+books_sold = mastersheet_data_preprocess_month.groupby(['Publishing Consultant'])['Book ID'].nunique().reset_index(name='Books Sold').iloc[1:]
 
 # Number of authors added by Publishing Consultant
-authors_added = filtered_df.groupby(['Publishing Consultant'])['Author Id'].nunique().reset_index(name='Authors Added').iloc[1:]
+authors_added = mastersheet_data_preprocess_month.groupby(['Publishing Consultant'])['Author Id'].nunique().reset_index(name='Authors Added').iloc[1:]
 
 # Plotly Express pie chart for "Books Sold"
 fig_books_sold = px.pie(

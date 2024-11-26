@@ -34,57 +34,20 @@ def sheet_to_df(sheet_id):
     data = worksheet.get_all_records()
     return pd.DataFrame(data)
 
-# Fetch data from a Google Sheet
-def fetch_track_sheet_data(sheet_id):
-    worksheet = gc.open_by_key(sheet_id).sheet1
-    data = worksheet.get_all_values()
-    
-    # Ensure data is not empty
-    if not data:
-        return pd.DataFrame()  # Return an empty DataFrame if no data is found
-    
-    # Extract headers and data rows
-    headers = data[0]
-    data_rows = data[1:]
 
-    # Create DataFrame with updated headers
-    data = pd.DataFrame(data_rows, columns=headers)
-    
-    # Convert 'Date' columns to datetime with specified formats
-    # First "Date" column with format "%d/%m/%Y"
-    data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y", errors='coerce')
-    data["Writing Date"] = pd.to_datetime(data["Writing Date"], format="%d/%m/%Y", errors='coerce')
-    data["Proofreading Date"] = pd.to_datetime(data["Proofreading Date"], format="%d/%m/%Y", errors='coerce')
-    data["Formatting Date"] = pd.to_datetime(data["Formatting Date"], format="%d/%m/%Y", errors='coerce')
-    
-    return data
+def mastersheet_preprocess(df):
 
-# Fetch data from a Google Sheet
-def fetch_writing_sheet_data(sheet_id):
-    worksheet = gc.open_by_key(sheet_id).sheet1
-    data = worksheet.get_all_values()
-    
-    # Ensure data is not empty
-    if not data:
-        return pd.DataFrame()  # Return an empty DataFrame if no data is found
-    
-    # Extract headers and data rows
-    headers = data[0]
-    data_rows = data[1:]
+    cols = ['Date','Book ID', 'Writing', 'Apply ISBN', 'ISBN', 'Cover Page', 'Back Page Update', 'Ready to Print','Print',
+        'Amazon Link', 'AGPH Link', 'Google Link', 'Flipkart Link','Final Mail', 'Deliver', 'Google Review' ]
 
-    # Create DataFrame with updated headers
-    df = pd.DataFrame(data_rows, columns=headers)
-    df['Date'] = pd.to_datetime(df['Date'],format="%d/%m/%Y", errors='coerce')
-    
-    return df
+    for i in cols:
+        df[i] = df[i].shift(-1)
 
-def track_writing_sheet_preproces(df, by_col = 'Date'):
-    df['Book Title'] = df['Book Title'].shift(1)
-    df = df.iloc[1:]
-    df = df.replace('', pd.NA) 
-    df = df.dropna(how = 'all')
-    df = df[df[by_col].dt.year == 2024]
-    df['Month'] = df[by_col].dt.strftime('%B')
+    df['Date'] = pd.to_datetime(df['Date'],  format= "%d/%m/%Y")
+    df['Book ID'] = pd.to_numeric(df['Book ID'], errors='coerce')
+    df['Date'] = df['Date'].ffill()
+    df['Book ID'] = df['Book ID'].ffill()
+    df = df[df['Date'].dt.year == 2024]
 
     return df
 
