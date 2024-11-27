@@ -9,6 +9,8 @@ import numpy as np
 from preprocessing import *
 import datetime
 
+start_time = time.time()
+
 # Set page configuration
 st.set_page_config(
     layout="wide",  # Set layout to wide mode
@@ -71,13 +73,13 @@ st.subheader(f"Metrics of {selected_month}")
 status_placeholder = st.empty()
 
 with status_placeholder.container():
-    with st.status("Fetching Data", expanded=False) as status:
+    with st.status(f"Loading {selected_month} Data", expanded=False) as status:
         time.sleep(1)
-        st.write("Calling Google Sheet API..")
+        st.text("Calling Google Sheet API..")
         time.sleep(2)
-        st.write("Processing Data..")
+        st.text("Processing Data..")
         time.sleep(2)
-        st.write("Plotting Graphs..")
+        st.text("Plotting Graphs..")
         time.sleep(1)
         status.update(
             label="Data Loaded!", state="complete", expanded=False)
@@ -125,8 +127,8 @@ conditions = {
     'Proofreading': {
         'by': ['Umer', 'Publish Only', 'Barnali', 'Sheetal', 'Rakesh', 'Aman', 'Minakshi', 'Vaibhavi'],
         'status': 'Proofreading Complete',
-        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled', 'Proofreading By','Proofreading Start Date', 'Proofreading Start Time',
-       'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
+        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled', 'Proofreading By','Proofreading Start Date', 
+                    'Proofreading Start Time', 'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
        'Writing End Time']
     },
     'Writing': {
@@ -309,7 +311,7 @@ def find_stuck_stage(row):
 fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_stage, axis=1)
 
 fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
-                                           'Reason For Hold','Writing End Date','Proofreading End Date','Formating End Time','Send Cover Page and Agreement', 'Agreement Recieved',
+                                           'Reason For Hold','Writing End Date','Proofreading End Date','Formating End Date','Send Cover Page and Agreement', 'Agreement Recieved',
                                              'Digital Prof','Confirmation', 'Ready to Print']].fillna("Pending")
 
 
@@ -735,4 +737,9 @@ with col1:
 
 with col2:
     st.plotly_chart(fig_authors_added, use_container_width=True)
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+
+st.toast(f'{selected_month} Data took {round(elapsed_time,2)} sec to load', icon='📥')
     
