@@ -8,6 +8,7 @@ import time
 import numpy as np
 from preprocessing import *
 import datetime
+import seaborn as sns
 
 start_time = time.time()
 
@@ -200,7 +201,20 @@ st.markdown(
     f"<span class='status-badge'>Status: Done!</span></h4>", 
     unsafe_allow_html=True)
 
-st.dataframe(work_done_status, use_container_width=False, hide_index=True)
+st.dataframe(work_done_status, use_container_width=False, hide_index=True, column_config = {
+        "Writing Complete": st.column_config.CheckboxColumn(
+            "Writing Complete",
+            default=False,
+        ),
+                "Proofreading Complete": st.column_config.CheckboxColumn(
+            "Proofreading Complete",
+            default=False,
+        ),
+                        "Formating Complete": st.column_config.CheckboxColumn(
+            "Formating Complete",
+            default=False,
+        )
+    })
 
 ######################################################################################
 ###############----------- Work Remaining status dataframe -------------################
@@ -275,8 +289,10 @@ with col2:
 ####################################################################################################
 
 
-writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess, selected_month)
-proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess, selected_month)
+writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess, 
+                                                                                        selected_month)
+proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess, 
+                                                                                                       selected_month)
 
 
 # CSS for the "Status" badge style
@@ -361,7 +377,8 @@ def find_stuck_stage(row):
 fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_stage, axis=1)
 
 fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
-                                           'Reason For Hold','Writing End Date','Proofreading End Date','Formating End Date','Send Cover Page and Agreement', 'Agreement Recieved',
+                                           'Reason For Hold','Writing End Date','Proofreading End Date',
+                                           'Formating End Date','Send Cover Page and Agreement', 'Agreement Recieved',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
 
@@ -375,6 +392,36 @@ st.markdown(
 # Prepare the reason counts data
 reason_counts = fortifiveday_status['Reason For Hold'].value_counts().reset_index()
 reason_counts.columns = ['Reason For Hold', 'Count']
+
+def number_to_color(number):
+    if 40 <= number <= 45:
+        return 'background-color: #FFA500; color: black'  # Light green
+    else:
+        return 'background-color: #FF6347; color: white' 
+    
+def reason_to_color(reason, color_map):
+    color = color_map.get(reason, 'background-color: #FFFFFF; color: black')  # Default white background
+    return f'{color}; color: black'
+
+# Get unique reasons
+unique_reasons = fortifiveday_status['Reason For Hold'].unique()
+
+# Generate a color palette using Streamlit's theme
+color_palette = sns.color_palette("Set2", len(unique_reasons)).as_hex()
+
+# Create a mapping from reason to color
+color_map = {reason: f'background-color: {color}' for reason, color in zip(unique_reasons, color_palette)}
+
+# Apply color to 'Since Enrolled' column
+styled_df = fortifiveday_status.style.applymap(
+   number_to_color,
+    subset=['Since Enrolled']
+)
+
+styled_df = styled_df.applymap(
+    lambda x: reason_to_color(x, color_map),
+    subset=['Reason For Hold']
+)
 
 # Create a pie chart with Plotly
 pie_chart = px.pie(
@@ -393,10 +440,36 @@ pie_chart.update_layout(title_x=0.3, showlegend=False)
 # Use columns to display DataFrame and chart side by side
 col1, col2 = st.columns([1.5, 1])
 
+
 # Display DataFrame in the first column
 with col1:
     st.markdown("#### 📋 Data")
-    st.dataframe(fortifiveday_status, use_container_width=True, hide_index=True)
+    st.dataframe(styled_df, use_container_width=True, hide_index=True,column_config = {
+        "Send Cover Page and Agreement": st.column_config.CheckboxColumn(
+            "Send Cover Page and Agreement",
+            default=False,
+        ),
+        "Agreement Recieved": st.column_config.CheckboxColumn(
+            "Agreement Recieved",
+            default=False,
+        ),
+        "Digital Prof": st.column_config.CheckboxColumn(
+            "Digital Prof",
+            default=False,
+        ),
+        "Confirmation": st.column_config.CheckboxColumn(
+            "Confirmation",
+            default=False,
+        ),
+        "Ready to Print": st.column_config.CheckboxColumn(
+            "Ready to Print",
+            default=False,
+        ),
+        "Print": st.column_config.CheckboxColumn(
+            "Print",
+            default=False,
+        )
+    })
 
 # Display the pie chart in the second column
 with col2:
