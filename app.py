@@ -73,12 +73,12 @@ st.subheader(f"Metrics of {selected_month}")
 status_placeholder = st.empty()
 
 with status_placeholder.container():
-    with st.status(f"Loading {selected_month} Data", expanded=False) as status:
+    with st.status(f"Loading {selected_month} Data", expanded=True) as status:
         time.sleep(1)
         st.text("Calling Google Sheet API..")
-        time.sleep(2)
+        time.sleep(1)
         st.text("Processing Data..")
-        time.sleep(2)
+        time.sleep(1)
         st.text("Plotting Graphs..")
         time.sleep(1)
         status.update(
@@ -270,6 +270,56 @@ with col2:
     st.dataframe(proofread_remaining_data, use_container_width=False, hide_index=True)
 
 
+####################################################################################################
+################-----------  Writing & Proofreading complete in this Month ----------##############
+####################################################################################################
+
+
+writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess, selected_month)
+proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess, selected_month)
+
+
+# CSS for the "Status" badge style
+st.markdown("""
+    <style>
+    .status-badge {
+        background-color: #e6e6e6;
+        color: #4CAF50;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 0.9em;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 5px;
+    }
+    h4 {
+        font-size: 1.1em;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Define two columns to display dataframes side by side
+col1, col2 = st.columns(2)
+
+# Display writing remaining data in the first column
+with col1:
+    st.markdown(
+        f"<h4>✍️ {writing_complete_data_by_month_count} Books Written in {selected_month}"
+        f"<span class='status-badge'>Status: Done!</span></h4>", 
+        unsafe_allow_html=True
+    )
+    st.dataframe(writing_complete_data_by_month, use_container_width=False, hide_index=True)
+
+# Display proofreading remaining data in the second column
+with col2:
+    st.markdown(
+        f"<h4>📖 {proofreading_complete_data_by_month_count} Books Proofreaded in {selected_month} "
+        f"<span class='status-badge'>Status: Done!</span></h4>", 
+        unsafe_allow_html=True
+    )
+    st.dataframe(proofreading_complete_data_by_month, use_container_width=False, hide_index=True)
+
+
 ######################################################################################
 ######################------------- 40 days data-------------#########################
 ######################################################################################
@@ -312,7 +362,7 @@ fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_st
 
 fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
                                            'Reason For Hold','Writing End Date','Proofreading End Date','Formating End Date','Send Cover Page and Agreement', 'Agreement Recieved',
-                                             'Digital Prof','Confirmation', 'Ready to Print']].fillna("Pending")
+                                             'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
 
 # Display the last 45 days data section with count, emoji, and title

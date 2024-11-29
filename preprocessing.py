@@ -127,6 +127,32 @@ def work_done_status(df):
     
     return filtered_df
 
+####################################################################################################
+################-----------  Writing & Proofreading complete in this Month ----------##############
+####################################################################################################
+
+def proofreading_complete(data,selected_month):
+    proofreading_complete = data[data['Proofreading End Date'].dt.strftime('%B') == selected_month]
+    proofreading_complete = proofreading_complete[proofreading_complete['Proofreading Complete'] == 'TRUE']
+    proofreading_complete = proofreading_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
+                                                   'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time',
+                                                   'Proofreading By', 'Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date',
+                                                   'Proofreading End Time']]
+    
+    count = proofreading_complete['Book ID'].nunique()
+
+    return proofreading_complete, count
+
+def writing_complete(data,selected_month):
+    writing_complete = data[data['Writing End Date'].dt.strftime('%B') == selected_month]
+    writing_complete = writing_complete[writing_complete['Writing Complete'] == 'TRUE']
+    writing_complete = writing_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
+                                                   'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']]
+    
+    count = writing_complete['Book ID'].nunique()
+    
+    return writing_complete, count
+
 
 #####################################################################################################
 #####################-----------  Bar chart Number of Books in Month ----------######################
