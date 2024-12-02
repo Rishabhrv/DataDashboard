@@ -94,6 +94,11 @@ def operations_preprocess(data):
 def work_done_status(df):
     from datetime import datetime, timedelta
 
+    # Ensure date columns are datetime objects
+    date_columns = ['Writing End Date', 'Proofreading End Date', 'Formating End Date']
+    for col in date_columns:
+        df[col] = pd.to_datetime(df[col], errors='coerce')  # Convert to datetime, set invalid to NaT
+
     # Get today's and yesterday's dates
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
@@ -108,24 +113,26 @@ def work_done_status(df):
     # Add a column to indicate which work was done
     def identify_work_done(row):
         work_done = []
-        if row['Writing End Date'] and row['Writing End Date'].date() in [today, yesterday]:
+        if pd.notna(row['Writing End Date']) and row['Writing End Date'].date() in [today, yesterday]:
             work_done.append('Writing')
-        if row['Proofreading End Date'] and row['Proofreading End Date'].date() in [today, yesterday]:
+        if pd.notna(row['Proofreading End Date']) and row['Proofreading End Date'].date() in [today, yesterday]:
             work_done.append('Proofreading')
-        if row['Formating End Date'] and row['Formating End Date'].date() in [today, yesterday]:
+        if pd.notna(row['Formating End Date']) and row['Formating End Date'].date() in [today, yesterday]:
             work_done.append('Formatting')
-        return ', '.join(work_done)
+        return ', '.join(work_done)  # Ensure this is a string
 
     filtered_df['Work Done'] = filtered_df.apply(identify_work_done, axis=1)
-    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date','Month', 'Since Enrolled', 'Work Done','Writing Complete', 'Writing By',
-       'Writing Start Date', 'Writing Start Time', 'Writing End Date',
-       'Writing End Time', 'Proofreading Complete', 'Proofreading By',
-       'Proofreading Start Date', 'Proofreading Start Time',
-       'Proofreading End Date', 'Proofreading End Time', 'Formating Complete',
-       'Formating By', 'Formating Start Date', 'Formating Start Time',
-       'Formating End Date', 'Formating End Time']].fillna('Pending')
-    
+
+    # Select and reorder columns
+    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date', 'Month', 'Since Enrolled', 'Work Done',
+                               'Writing Complete', 'Writing By', 'Writing Start Date', 'Writing Start Time',
+                               'Writing End Date', 'Writing End Time', 'Proofreading Complete', 'Proofreading By',
+                               'Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date',
+                               'Proofreading End Time', 'Formating Complete', 'Formating By', 'Formating Start Date',
+                               'Formating Start Time', 'Formating End Date', 'Formating End Time']].fillna('Pending')
+
     return filtered_df
+
 
 ####################################################################################################
 ################-----------  Writing & Proofreading complete in this Month ----------##############
