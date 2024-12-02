@@ -361,7 +361,7 @@ status_columns = {
     'Proofreading Complete': 'Proofreading Incomplete',
     'Formating Complete': 'Formatting Incomplete',
     'Send Cover Page and Agreement': 'Cover/Agreement Pending',
-    'Agreement Recieved': 'Agreement Pending',
+    'Agreement Received': 'Agreement Pending',
     'Digital Prof': 'Digital Proof Pending',
     'Confirmation': 'Confirmation Pending',
 }
@@ -378,7 +378,7 @@ fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_st
 
 fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
                                            'Reason For Hold','Writing End Date','Proofreading End Date',
-                                           'Formating End Date','Send Cover Page and Agreement', 'Agreement Recieved',
+                                           'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
 
@@ -449,8 +449,8 @@ with col1:
             "Send Cover Page and Agreement",
             default=False,
         ),
-        "Agreement Recieved": st.column_config.CheckboxColumn(
-            "Agreement Recieved",
+        "Agreement Received": st.column_config.CheckboxColumn(
+            "Agreement Received",
             default=False,
         ),
         "Digital Prof": st.column_config.CheckboxColumn(
@@ -587,7 +587,7 @@ author_counts = {
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Recieved'] == 'TRUE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Received'] == 'TRUE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
     ],
@@ -597,7 +597,7 @@ author_counts = {
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Recieved'] == 'FALSE']['Author Id'].nunique(),
+        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Received'] == 'FALSE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
         mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
     ]
