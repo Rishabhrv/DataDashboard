@@ -1,14 +1,12 @@
 import json
 import os
 import pandas as pd
-import datetime
 import altair as alt
+import streamlit as st
 
 import gspread
 import warnings
 warnings.simplefilter('ignore')
-import numpy as np
-from datetime import datetime
 from google.oauth2.service_account import Credentials
 
 creds_path = os.getenv('CREDS_PATH', "token.json")
@@ -29,6 +27,7 @@ gc = gspread.authorize(credentials)
 ######################################################################################
 
 # Fetch data from a Google Sheet
+@st.cache_data(show_spinner=False)
 def sheet_to_df(sheet_id):
     worksheet = gc.open_by_key(sheet_id).sheet1
     data = worksheet.get_all_records()

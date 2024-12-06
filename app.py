@@ -74,7 +74,7 @@ st.subheader(f"Metrics of {selected_month}")
 status_placeholder = st.empty()
 
 with status_placeholder.container():
-    with st.status(f"Loading {selected_month} Data", expanded=True) as status:
+    with st.status(f"Loading {selected_month} Data", expanded=False) as status:
         time.sleep(1)
         st.text("Calling Google Sheet API..")
         time.sleep(1)
