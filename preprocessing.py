@@ -123,7 +123,7 @@ def work_done_status(df):
     filtered_df['Work Done'] = filtered_df.apply(identify_work_done, axis=1)
 
     # Select and reorder columns
-    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date', 'Month', 'Since Enrolled', 'Work Done',
+    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date', 'Month', 'Since Enrolled', 'No of Author','Work Done',
                                'Writing Complete', 'Writing By', 'Writing Start Date', 'Writing Start Time',
                                'Writing End Date', 'Writing End Time', 'Proofreading Complete', 'Proofreading By',
                                'Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date',

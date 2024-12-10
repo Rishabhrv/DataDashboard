@@ -121,14 +121,14 @@ conditions = {
     'Formating': {
         'by': ['Akash', 'Anush', 'Surendra', 'Rahul'],
         'status': 'Formating Complete',
-        'columns': ['Book ID', 'Book Title', 'Date','Month','Since Enrolled', 'Formating By', 'Formating Start Date', 'Formating Start Time',
+        'columns': ['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author', 'Formating By', 'Formating Start Date', 'Formating Start Time',
       'Proofreading By','Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date', 'Proofreading End Time',
       'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']
     },
     'Proofreading': {
         'by': ['Umer', 'Publish Only', 'Barnali', 'Sheetal', 'Rakesh', 'Aman', 'Minakshi', 'Vaibhavi'],
         'status': 'Proofreading Complete',
-        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled', 'Proofreading By','Proofreading Start Date', 
+        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled','No of Author', 'Proofreading By','Proofreading Start Date', 
                     'Proofreading Start Time', 'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
        'Writing End Time']
     },
@@ -137,7 +137,7 @@ conditions = {
                'Publish Only', 'Minakshi', 'Preeti', 'Muskan', 'Bhavana', 'Aman', 
                'Sachin', 'muskan'],
         'status': 'Writing Complete',
-        'columns': ['Book ID', 'Book Title','Date', 'Month', 'Since Enrolled','Writing By','Writing Start Date', 'Writing Start Time']
+        'columns': ['Book ID', 'Book Title','Date', 'Month', 'Since Enrolled','No of Author','Writing By','Writing Start Date', 'Writing Start Time']
     }
 }
 
@@ -224,7 +224,7 @@ st.dataframe(work_done_status, use_container_width=False, hide_index=True, colum
 def writing_remaining(data):
 
     data['Writing By'] = data['Writing By'].fillna('Pending')
-    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','Writing By']]
+    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author','Writing By']]
     writing_remaining = data['Book ID'].nunique() - len(results['Writing'])
 
     return data,writing_remaining
@@ -232,7 +232,7 @@ def writing_remaining(data):
 def proofread_remaining(data):
 
     data['Proofreading By'] = data['Proofreading By'].fillna('Pending')
-    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','Writing By',
+    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author','Writing By',
                                                                                                     'Writing Start Date', 'Writing Start Time', 'Writing End Date',
                                                                                                     'Writing End Time','Proofreading By']]
     proof_remaining = data['Book ID'].nunique() - len(results['Proofreading'])
@@ -376,7 +376,7 @@ def find_stuck_stage(row):
 # Apply the function to create a 'Stuck Stage' column
 fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_stage, axis=1)
 
-fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled',
+fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled','No of Author',
                                            'Reason For Hold','Writing End Date','Proofreading End Date',
                                            'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
