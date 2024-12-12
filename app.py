@@ -5,10 +5,14 @@ import plotly.express as px
 import pandas as pd
 from datetime import datetime
 import time
+import requests
 import numpy as np
 from preprocessing import *
 import datetime
 import seaborn as sns
+import jwt
+from dotenv import load_dotenv
+import webbrowser
 
 start_time = time.time()
 
@@ -18,6 +22,31 @@ st.set_page_config(
     initial_sidebar_state="auto",  # Automatically collapse the sidebar
      page_title="Data Dashboard",
 )
+
+load_dotenv()
+# Use the same secret key as MasterSheet3
+SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
+
+def validate_token():
+    # Extract the token from query parameters
+    params = st.query_params
+    if 'token' not in params:
+        st.error("Access Denied: Login Required")
+        st.stop()
+
+    token = params['token']
+    try:
+        decoded_token = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        #st.success(f"Welcome {decoded_token['user']}! Role: {decoded_token['role']}")
+    except jwt.ExpiredSignatureError:
+        st.error("Access Denied: Token has expired.")
+        st.stop()
+    except jwt.InvalidTokenError:
+        st.error("Access Denied: Invalid token.")
+        st.stop()
+
+# Validate token before running the app
+validate_token()
 
 sheets = read_sheets_from_json()
 
@@ -38,7 +67,41 @@ month_order = [
     "July", "August", "September", "October", "November", "December"
 ]
 
-selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", default =unique_months_sorted[-1],label_visibility ='collapsed')
+# Example layout
+col1, col2 = st.columns([14, 2])  # Adjust column widths as needed
+
+with col1:
+    selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", 
+                              default =unique_months_sorted[-1],label_visibility ='collapsed')
+
+with col2:
+    adsearch_clicked = st.button("Search Books", icon = "🔍",type = "secondary")
+
+
+# Define API URL and secure API key
+MASTERSHEET_API_URL = "http://localhost:5000/redirect_to_adsearch"
+
+if adsearch_clicked:
+    # Prepare user details for token generation
+    user_details = {
+        "user": "Admin User",  # Replace with actual user details
+        "role": "Admin"
+    }
+
+    headers = {
+        "Authorization": SECRET_KEY
+    }
+
+    try:
+        # Send POST request to Mastersheet app
+        response = requests.post(MASTERSHEET_API_URL, json=user_details, headers=headers)
+        if response.status_code == 200:
+            adsearch_url = response.json().get("url")
+            webbrowser.open(adsearch_url)  # Open Adsearch in the default browser
+        else:
+            st.error("Failed to generate AdSearch URL. Please try again.")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
 
 ######################################################################################
 #####################----------- Metrics of Selected Month ----------######################
@@ -109,7 +172,6 @@ with st.container():
 
 # with st.spinner('Loading Data...'):
 #     time.sleep(4)
-
 
 
 ######################################################################################
