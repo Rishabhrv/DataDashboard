@@ -79,7 +79,7 @@ with col2:
 
 
 # Define API URL and secure API key
-MASTERSHEET_API_URL = "http://localhost:5000/redirect_to_adsearch"
+MASTERSHEET_API_URL = "https://agkitdatabase.agvolumes.com/redirect_to_adsearch"
 
 if adsearch_clicked:
     # Prepare user details for token generation
