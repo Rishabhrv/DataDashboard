@@ -14,6 +14,8 @@ import jwt
 from dotenv import load_dotenv
 import webbrowser
 
+
+
 start_time = time.time()
 
 # Set page configuration
