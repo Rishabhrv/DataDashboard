@@ -10,9 +10,14 @@ import numpy as np
 from preprocessing import *
 import datetime
 import seaborn as sns
-import jwt
 from dotenv import load_dotenv
 import webbrowser
+import base64
+import json
+import hashlib
+import hmac
+import time
+
 
 start_time = time.time()
 
@@ -29,21 +34,44 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
 
 def validate_token():
     # Extract the token from query parameters
-    params = st.query_params
+    params = st.query_params  # st.query_params for earlier versions
     if 'token' not in params:
         st.error("Access Denied: Login Required")
         st.stop()
 
     token = params['token']
     try:
-        decoded_token = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        #st.success(f"Welcome {decoded_token['user']}! Role: {decoded_token['role']}")
-    except jwt.ExpiredSignatureError:
-        st.error("Access Denied: Token has expired.")
+        # Split the JWT into header, payload, and signature
+        parts = token.split('.')
+        if len(parts) != 3:
+            raise ValueError("Invalid token format")
+
+        # Decode header and payload
+        header = json.loads(base64.urlsafe_b64decode(parts[0] + '==').decode('utf-8'))
+        payload = json.loads(base64.urlsafe_b64decode(parts[1] + '==').decode('utf-8'))
+
+        # Verify signature
+        signature = base64.urlsafe_b64decode(parts[2] + '==')
+        expected_signature = hmac.new(
+            SECRET_KEY.encode(),
+            f"{parts[0]}.{parts[1]}".encode(),
+            hashlib.sha256
+        ).digest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            raise ValueError("Invalid token signature")
+
+        # Check expiration (if present)
+        if 'exp' in payload and payload['exp'] < time.time():
+            raise ValueError("Token has expired")
+
+        # Access payload data (e.g., user and role)
+        #st.success(f"Welcome {payload['user']}! Role: {payload['role']}")
+
+    except ValueError as e:
+        st.error(f"Access Denied: {e}")
         st.stop()
-    except jwt.InvalidTokenError:
-        st.error("Access Denied: Invalid token.")
-        st.stop()
+
 
 # Validate token before running the app
 validate_token()
