@@ -24,17 +24,17 @@ jobs:
     - name: Deploy to VPS
       run: |
         ssh -o StrictHostKeyChecking=no rishabhvyas@178.16.137.226 << 'EOF'
-          cd /home/rishabhvyas/MasterSheet3
-          
+          cd /home/rishabhvyas/DataDashboard
+          git reset --hard HEAD
+          git clean -fd
           # Ensure secrets files are not overwritten
-          git stash  # Save any untracked or changed files (like secrets)
           git pull origin main  # Pull the latest changes
           git stash pop  # Restore any stashed files
 
           # Activate virtual environment and install dependencies
-          source /home/rishabhvyas/MasterSheet3/venv/bin/activate
+          source /home/rishabhvyas/DataDashboard/venv/bin/activate
           pip install -r requirements.txt
 
           # Restart the Flask application service
-          sudo systemctl restart mastersheet.service
+          sudo systemctl restart datadashboard.service
         EOF
