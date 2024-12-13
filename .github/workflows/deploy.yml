@@ -29,7 +29,6 @@ jobs:
           git clean -fd
           # Ensure secrets files are not overwritten
           git pull origin main  # Pull the latest changes
-          git stash pop  # Restore any stashed files
 
           # Activate virtual environment and install dependencies
           source /home/rishabhvyas/DataDashboard/venv/bin/activate
