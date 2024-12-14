@@ -112,22 +112,35 @@ MASTERSHEET_API_URL = "http://localhost:5000/redirect_to_adsearch"
 if adsearch_clicked:
     # Prepare user details for token generation
     user_details = {
-        "user": "Admin User",  # Replace with actual user details
+        "user": "Admin",  # Replace with actual user details
         "role": "Admin"
     }
 
     headers = {
-        "Authorization": SECRET_KEY
+        "Authorization": SECRET_KEY,
+        "Content-Type": "application/json"
     }
 
     try:
         # Send POST request to Mastersheet app
         response = requests.post(MASTERSHEET_API_URL, json=user_details, headers=headers)
+
+        print("Response status code:", response.status_code)
+        print("Response text:", response.text)  # Log raw response
+
         if response.status_code == 200:
-            adsearch_url = response.json().get("url")
-            webbrowser.open(adsearch_url)  # Open Adsearch in the default browser
+            try:
+                response_data = response.json()
+                adsearch_url = response_data.get("url")
+                if adsearch_url:
+                    webbrowser.open(adsearch_url)
+                else:
+                    st.error("URL not found in the response. Please contact support.")
+            except ValueError:
+                st.error("Invalid JSON response received from the server.")
         else:
-            st.error("Failed to generate AdSearch URL. Please try again.")
+            st.error(f"Failed to generate AdSearch URL. Status Code: {response.status_code}")
+
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
 
