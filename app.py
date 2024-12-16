@@ -11,7 +11,6 @@ from preprocessing import *
 import datetime
 import seaborn as sns
 from dotenv import load_dotenv
-import webbrowser
 import base64
 import json
 import hashlib
@@ -24,9 +23,13 @@ start_time = time.time()
 # Set page configuration
 st.set_page_config(
     layout="wide",  # Set layout to wide mode
-    initial_sidebar_state="auto",  # Automatically collapse the sidebar
-     page_title="Data Dashboard",
+    initial_sidebar_state="collapsed",
+    page_icon="chart_with_upwards_trend",  
+     page_title="AGPH Dashboard",
 )
+
+# Define API URL and secure API key
+MASTERSHEET_API_URL = "https://agkitdatabase.agvolumes.com/redirect_to_adsearch"
 
 load_dotenv()
 # Use the same secret key as MasterSheet3
@@ -72,9 +75,34 @@ def validate_token():
         st.error(f"Access Denied: {e}")
         st.stop()
 
-
 # Validate token before running the app
 validate_token()
+
+# Prepare user details for token generation
+user_details = {
+    "user": "Admin",  # Replace with actual user details
+    "role": "Admin"
+}
+
+headers = {
+    "Authorization": SECRET_KEY,
+    "Content-Type": "application/json"
+}
+
+# Generate URL
+adsearch_url = None
+try:
+    # Send POST request to Mastersheet app
+    response = requests.post(MASTERSHEET_API_URL, json=user_details, headers=headers)
+
+    if response.status_code == 200:
+        response_data = response.json()
+        adsearch_url = response_data.get("url")
+    else:
+        st.error(f"Failed to generate AdSearch URL. Status Code: {response.status_code}")
+
+except Exception as e:
+    st.error(f"An error occurred: {str(e)}")
 
 sheets = read_sheets_from_json()
 
@@ -103,46 +131,36 @@ with col1:
                               default =unique_months_sorted[-1],label_visibility ='collapsed')
 
 with col2:
-    adsearch_clicked = st.button("Search Books", icon = "🔍",type = "secondary")
+    if adsearch_url:
+        adsearch_clicked = st.markdown(
+        f"""
+        <a href="{adsearch_url}" target="_blank" style="text-decoration: none;">
+            <button style="
+                background-color: #ffffff;
+                color: black;
+                border:  0.2px solid;
+                border-color: #b3abab;
+                padding: 6px 10px;
+                text-align: center;
+                font-size: 13.5px;
+                cursor: pointer;
+                border-radius: 55px;">
+                Search Books 🔍
+            </button>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
+    
 
+# # Navigation button to another page
+# if st.button("IJISEM", key="ijisem"):
+#     st.experimental_set_query_params(page="details")
 
-# Define API URL and secure API key
-MASTERSHEET_API_URL = "https://agkitdatabase.agvolumes.com/redirect_to_adsearch"
-
-if adsearch_clicked:
-    # Prepare user details for token generation
-    user_details = {
-        "user": "Admin",  # Replace with actual user details
-        "role": "Admin"
-    }
-
-    headers = {
-        "Authorization": SECRET_KEY,
-        "Content-Type": "application/json"
-    }
-
-    try:
-        # Send POST request to Mastersheet app
-        response = requests.post(MASTERSHEET_API_URL, json=user_details, headers=headers)
-
-        print("Response status code:", response.status_code)
-        print("Response text:", response.text)  # Log raw response
-
-        if response.status_code == 200:
-            try:
-                response_data = response.json()
-                adsearch_url = response_data.get("url")
-                if adsearch_url:
-                    webbrowser.open(adsearch_url)
-                else:
-                    st.error("URL not found in the response. Please contact support.")
-            except ValueError:
-                st.error("Invalid JSON response received from the server.")
-        else:
-            st.error(f"Failed to generate AdSearch URL. Status Code: {response.status_code}")
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+# # Check if redirected to the details page
+# if st.experimental_get_query_params().get("page") == ["details"]:
+#     st.experimental_set_query_params()
+#     st.experimental_switch_page("ijisem") 
 
 ######################################################################################
 #####################----------- Metrics of Selected Month ----------######################
