@@ -17,9 +17,6 @@ import hashlib
 import hmac
 import time
 
-
-start_time = time.time()
-
 # Set page configuration
 st.set_page_config(
     layout="wide",  # Set layout to wide mode
@@ -68,9 +65,6 @@ def validate_token():
         if 'exp' in payload and payload['exp'] < time.time():
             raise ValueError("Token has expired")
 
-        # Access payload data (e.g., user and role)
-        #st.success(f"Welcome {payload['user']}! Role: {payload['role']}")
-
     except ValueError as e:
         st.error(f"Access Denied: {e}")
         st.stop()
@@ -80,7 +74,7 @@ validate_token()
 
 # Prepare user details for token generation
 user_details = {
-    "user": "Admin",  # Replace with actual user details
+    "user": "Admin",  
     "role": "Admin"
 }
 
@@ -106,12 +100,29 @@ except Exception as e:
 
 sheets = read_sheets_from_json()
 
-# Load data and preprocess
-operations_sheet_data = sheet_to_df(sheets['Operations'])
-mastersheet_data = sheet_to_df(sheets['Mastersheet'])
 
-operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
-mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
+######################################################################################
+###########################----------- Data Loader & Spinner ----------#############################
+######################################################################################
+
+# Create a placeholder for the status
+status_placeholder = st.empty()
+
+with status_placeholder.container():
+    with st.status("Loading Data", expanded=True) as status:
+        st.text("Calling Google Sheet API...")
+        mastersheet_data = sheet_to_df(sheets['Mastersheet'])
+        operations_sheet_data = sheet_to_df(sheets['Operations'])
+        st.text("Processing Data..")
+        time.sleep(1)
+        operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
+        st.text("Plotting Graphs..")
+        time.sleep(1)
+        mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
+        status.update(
+            label="Data Loaded!", state="complete", expanded=False)
+
+status_placeholder.empty()
 
 unique_months = operations_sheet_data_preprocess['Month'].unique() 
 from datetime import datetime
@@ -152,16 +163,6 @@ with col2:
         unsafe_allow_html=True
     )
     
-
-# # Navigation button to another page
-# if st.button("IJISEM", key="ijisem"):
-#     st.experimental_set_query_params(page="details")
-
-# # Check if redirected to the details page
-# if st.experimental_get_query_params().get("page") == ["details"]:
-#     st.experimental_set_query_params()
-#     st.experimental_switch_page("ijisem") 
-
 ######################################################################################
 #####################----------- Metrics of Selected Month ----------######################
 ######################################################################################
@@ -192,24 +193,6 @@ import time
 
 st.subheader(f"Metrics of {selected_month}")
 
-# Create a placeholder for the status
-status_placeholder = st.empty()
-
-with status_placeholder.container():
-    with st.status(f"Loading {selected_month} Data", expanded=False) as status:
-        time.sleep(1)
-        st.text("Calling Google Sheet API..")
-        time.sleep(1)
-        st.text("Processing Data..")
-        time.sleep(1)
-        st.text("Plotting Graphs..")
-        time.sleep(1)
-        status.update(
-            label="Data Loaded!", state="complete", expanded=False)
-
-# Replace the status element with an empty container to "hide" it
-status_placeholder.empty()
-
 with st.container():
     # Display metrics with TRUE counts in value and FALSE counts in delta
     col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
@@ -222,15 +205,6 @@ with st.container():
     col7.metric("ISBN Received", books_apply_isbn_true, delta=f"-{total_books - books_apply_isbn_true} not received")
     col8.metric("Printed", books_printed_true, delta=f"-{total_books - books_printed_true} not printed")
     col9.metric("Delivered", books_delivered_true, delta=f"-{total_books - books_delivered_true} not delivered")
-
-
-######################################################################################
-###########################----------- Spinner ----------#############################
-######################################################################################
-
-
-# with st.spinner('Loading Data...'):
-#     time.sleep(4)
 
 
 ######################################################################################
@@ -981,9 +955,4 @@ with col1:
 
 with col2:
     st.plotly_chart(fig_authors_added, use_container_width=True)
-
-end_time = time.time()
-elapsed_time = end_time - start_time
-
-st.toast(f'{selected_month} Data took {round(elapsed_time,2)} sec to load', icon='📥')
     
