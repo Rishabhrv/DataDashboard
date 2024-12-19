@@ -100,29 +100,33 @@ except Exception as e:
 
 sheets = read_sheets_from_json()
 
-
-######################################################################################
-###########################----------- Data Loader & Spinner ----------#############################
-######################################################################################
-
-# Create a placeholder for the status
+# # Create a placeholder for the status
 status_placeholder = st.empty()
 
 with status_placeholder.container():
     with st.status("Loading Data", expanded=True) as status:
-        st.text("Calling Google Sheet API...")
+        st.write("Calling Google Sheet API...")
         mastersheet_data = sheet_to_df(sheets['Mastersheet'])
         operations_sheet_data = sheet_to_df(sheets['Operations'])
-        st.text("Processing Data..")
-        time.sleep(1)
+        st.write("Processing Data..")
         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
-        st.text("Plotting Graphs..")
-        time.sleep(1)
+        st.write("Plotting Graphs..")
         mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
         status.update(
             label="Data Loaded!", state="complete", expanded=False)
 
 status_placeholder.empty()
+
+######################################################################################
+###########################----------- Data Loader & Spinner ----------#############################
+######################################################################################
+
+
+# with st.spinner('Loading Data...'):
+#         mastersheet_data = sheet_to_df(sheets['Mastersheet'])
+#         operations_sheet_data = sheet_to_df(sheets['Operations'])
+#         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
+#         mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
 
 unique_months = operations_sheet_data_preprocess['Month'].unique() 
 from datetime import datetime
@@ -134,7 +138,6 @@ month_order = [
     "July", "August", "September", "October", "November", "December"
 ]
 
-# Example layout
 col1, col2 = st.columns([14, 2])  # Adjust column widths as needed
 
 with col1:
