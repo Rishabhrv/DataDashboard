@@ -84,6 +84,31 @@ def operations_preprocess(data):
 
     return data
 
+def ijisem_preprocess(data):
+    # Replace empty strings with NaN
+    data = data.replace('', pd.NA)
+    
+    # Drop rows where all elements are NaN
+    data = data.dropna(how='all')
+
+    # Convert 'Date' columns to datetime
+    date_columns = [
+        'Receiving Date', 'Review Date', 'Formatting Date', 'Paper Uploading Date']
+    
+    for col in date_columns:
+        if col in data.columns:
+            # Convert to datetime64[ns] first
+            data[col] = pd.to_datetime(data[col], format="%d/%m/%Y", errors='coerce')
+
+    # Add a column for the month name
+    data['Month'] = data['Receiving Date'].dt.strftime('%B')
+    data['Year'] = data['Receiving Date'].dt.year
+
+    return data
+
+def check_number_or_string(value):
+    return isinstance(value, (int, float, str))
+
 #####################################################################################################
 #####################-----------  Current day status dataframe ----------######################
 ####################################################################################################

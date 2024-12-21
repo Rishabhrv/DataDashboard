@@ -30,6 +30,15 @@ st.set_page_config(
     page_title="AGPH Dashboard",
 )
 
+# Inject CSS to remove the menu (optional)
+hide_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 # Define API URL and secure API key
 MASTERSHEET_API_URL = "https://agkitdatabase.agvolumes.com/redirect_to_adsearch"
 
