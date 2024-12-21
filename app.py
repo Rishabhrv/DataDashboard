@@ -19,10 +19,15 @@ import time
 
 # Set page configuration
 st.set_page_config(
+    menu_items={
+        'About': "AGPH",
+        'Get Help': None,
+        'Report a bug': None,   
+    },
     layout="wide",  # Set layout to wide mode
     initial_sidebar_state="collapsed",
     page_icon="chart_with_upwards_trend",  
-     page_title="AGPH Dashboard",
+    page_title="AGPH Dashboard",
 )
 
 # Define API URL and secure API key
@@ -71,6 +76,16 @@ def validate_token():
 
 # Validate token before running the app
 validate_token()
+
+# Initialize session state for new visitors
+if "visited" not in st.session_state:
+    st.session_state.visited = False
+
+# Check if the user is new
+if not st.session_state.visited:
+    st.toast("Please Wait New Data is being fetched...", icon="ℹ️")  # Notify user
+    st.cache_data.clear()  # Clear cache for new visitors
+    st.session_state.visited = True  # Mark as visited
 
 # Prepare user details for token generation
 user_details = {
