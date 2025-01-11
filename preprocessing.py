@@ -73,10 +73,11 @@ def operations_preprocess(data):
 
     if 'Date' in data.columns:
         # Filter data by the specified year
-        data = data[data['Date'].dt.year == 2024]
+        data = data[data['Date'].dt.year >= 2024]
 
         # Add a column for the month name
         data['Month'] = data['Date'].dt.strftime('%B')
+        data['Year'] = data['Date'].dt.year
 
         # Add a column for the days since enrollment
         current_date = pd.Timestamp.now()  # Current datetime

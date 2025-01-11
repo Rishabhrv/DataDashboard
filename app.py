@@ -84,7 +84,7 @@ def validate_token():
         st.stop()
 
 # Validate token before running the app
-validate_token()
+#validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -152,9 +152,8 @@ status_placeholder.empty()
 #         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
 #         mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
 
-unique_months = operations_sheet_data_preprocess['Month'].unique() 
-from datetime import datetime
-unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
+unique_year = operations_sheet_data_preprocess['Year'].unique()[~np.isnan(operations_sheet_data_preprocess['Year'].unique())]
+# unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
 
 # Map month numbers to month names and set the order
 month_order = [
@@ -162,11 +161,17 @@ month_order = [
     "July", "August", "September", "October", "November", "December"
 ]
 
+selected_year = st.pills("2024", unique_year, selection_mode="single", 
+                            default =unique_year[-1],label_visibility ='collapsed')
+
+operations_sheet_data_preprocess_year = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Year']== selected_year]
+unique_months_selected_year = operations_sheet_data_preprocess_year['Month'].unique() 
+
 col1, col2 = st.columns([14, 2])  # Adjust column widths as needed
 
 with col1:
-    selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", 
-                              default =unique_months_sorted[-1],label_visibility ='collapsed')
+    selected_month = st.pills("2024", unique_months_selected_year, selection_mode="single", 
+                              default =unique_months_selected_year[-1],label_visibility ='collapsed')
 
 with col2:
     if adsearch_url:
@@ -195,15 +200,19 @@ with col2:
 ######################################################################################
 
 # Filter DataFrame based on selected month
+
+# ijisem_sheet_data_preprocess_filter = ijisem_sheet_data_preprocess[
+#     (ijisem_sheet_data_preprocess['Receiving Date'].dt.year == selected_year) & 
+#     (ijisem_sheet_data_preprocess['Receiving Date'].dt.strftime('%B') == selected_month)
+# ]
+
 mastersheet_data_preprocess_month = mastersheet_data_preprocess[mastersheet_data_preprocess['Date'].dt.strftime('%B') == selected_month]
-operations_sheet_data_preprocess_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Month']== selected_month]
+operations_sheet_data_preprocess_month = operations_sheet_data_preprocess_year[operations_sheet_data_preprocess_year['Month']== selected_month]
 
 # Calculate metrics based on both TRUE and FALSE values in the filtered DataFrame
 
-total_authors = len(np.array(mastersheet_data_preprocess_month['Author Id'].unique())[np.array(mastersheet_data_preprocess_month['Author Id'].unique()) !=''])
-
+total_authors = operations_sheet_data_preprocess_month['No of Author'].sum()
 total_books= len(np.array(operations_sheet_data_preprocess_month['Book ID'].unique())[np.array(operations_sheet_data_preprocess_month['Book ID'].unique()) !=''])
-#total_authors = len(np.array(operations_sheet_data_preprocess_month['Author Id'].unique())[np.array(operations_sheet_data_preprocess_month['Author Id'].unique()) !=''])
 
 books_written_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] == 'TRUE']['Book ID'].nunique()
 books_proofread_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Proofreading Complete'] == 'TRUE']['Book ID'].nunique()
@@ -211,10 +220,9 @@ books_formatted_true = operations_sheet_data_preprocess_month[operations_sheet_d
 
 
 books_complete = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Book Complete'] == 'TRUE']['Book ID'].nunique()
-#books_apply_isbn_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
+books_apply_isbn_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
 books_printed_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] == 'TRUE']['Book ID'].nunique()
 books_delivered_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
-books_apply_isbn_true = mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique()
 
 import time
 
@@ -411,9 +419,9 @@ with col2:
 ####################################################################################################
 
 
-writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess, 
+writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess_year, 
                                                                                         selected_month)
-proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess, 
+proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess_year, 
                                                                                                        selected_month)
 
 
@@ -671,22 +679,22 @@ st.altair_chart((line_chart + text_books + line_chart_authors + text_authors), u
 counts = {
     "Category": ["Writing", "Apply ISBN", "Cover Page", "Back Page Update", "Ready to Print", "Print", "Deliver"],
     "TRUE": [
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Writing'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Cover Page'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Back Page Update'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Ready to Print'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Print'] == 'TRUE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Cover Page'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Back Page Update'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Ready to Print'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] == 'TRUE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
     ],
     "FALSE": [
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Writing'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Apply ISBN'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Cover Page'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Back Page Update'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Ready to Print'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Print'] == 'FALSE']['Book ID'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Deliver'] == 'FALSE']['Book ID'].nunique()
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Cover Page'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Back Page Update'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Ready to Print'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] == 'FALSE']['Book ID'].nunique()
     ]
 }
 
@@ -704,24 +712,24 @@ author_counts = {
         "Send Cover Page and Agreement", "Agreement Received", "Digital Prof", "Confirmation"
     ],
     "TRUE": [
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Author Detail'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Received'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
     ],
     "FALSE": [
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Author Detail'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Agreement Received'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
-        mastersheet_data_preprocess_month[mastersheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
     ]
 }
 

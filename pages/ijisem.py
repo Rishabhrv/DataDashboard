@@ -3,6 +3,13 @@ import pandas as pd
 from preprocessing import *
 import time
 import warnings
+import time
+from dotenv import load_dotenv
+import base64
+import json
+import hashlib
+import hmac
+import time
 warnings.simplefilter('ignore')
 
 # Set page configuration
@@ -12,6 +19,50 @@ st.set_page_config(
     page_icon="chart_with_upwards_trend",  
      page_title="IJISEM Dashboard",
 )
+
+load_dotenv()
+# Use the same secret key as MasterSheet3
+SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
+
+def validate_token():
+    # Extract the token from query parameters
+    params = st.query_params  # st.query_params for earlier versions
+    if 'token' not in params:
+        st.error("Access Denied: Login Required")
+        st.stop()
+
+    token = params['token']
+    try:
+        # Split the JWT into header, payload, and signature
+        parts = token.split('.')
+        if len(parts) != 3:
+            raise ValueError("Invalid token format")
+
+        # Decode header and payload
+        header = json.loads(base64.urlsafe_b64decode(parts[0] + '==').decode('utf-8'))
+        payload = json.loads(base64.urlsafe_b64decode(parts[1] + '==').decode('utf-8'))
+
+        # Verify signature
+        signature = base64.urlsafe_b64decode(parts[2] + '==')
+        expected_signature = hmac.new(
+            SECRET_KEY.encode(),
+            f"{parts[0]}.{parts[1]}".encode(),
+            hashlib.sha256
+        ).digest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            raise ValueError("Invalid token signature")
+
+        # Check expiration (if present)
+        if 'exp' in payload and payload['exp'] < time.time():
+            raise ValueError("Token has expired")
+
+    except ValueError as e:
+        st.error(f"Access Denied: {e}")
+        st.stop()
+
+# Validate token before running the app
+validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
