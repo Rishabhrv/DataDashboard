@@ -10,6 +10,8 @@ import json
 import hashlib
 import hmac
 import time
+import numpy as np  
+from datetime import datetime
 warnings.simplefilter('ignore')
 
 # Set page configuration
@@ -21,12 +23,11 @@ st.set_page_config(
 )
 
 load_dotenv()
-# Use the same secret key as MasterSheet3
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
 
 def validate_token():
     # Extract the token from query parameters
-    params = st.query_params  # st.query_params for earlier versions
+    params = st.query_params  
     if 'token' not in params:
         st.error("Access Denied: Login Required")
         st.stop()
@@ -53,7 +54,7 @@ def validate_token():
         if not hmac.compare_digest(signature, expected_signature):
             raise ValueError("Invalid token signature")
 
-        # Check expiration (if present)
+        # Check if token has expired
         if 'exp' in payload and payload['exp'] < time.time():
             raise ValueError("Token has expired")
 
@@ -62,7 +63,7 @@ def validate_token():
         st.stop()
 
 # Validate token before running the app
-validate_token()
+#validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -81,15 +82,22 @@ with st.spinner('Loading Data...'):
     ijisem_sheet_data_preprocess = ijisem_preprocess(ijisem_sheet_data)
     time.sleep(1)
 
-unique_months = ijisem_sheet_data_preprocess['Month'].unique()
-unique_year = ijisem_sheet_data_preprocess['Year'].unique()
 
-from datetime import datetime
-unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B"))
+month_order = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+]
 
+
+unique_year = ijisem_sheet_data_preprocess['Year'].unique()[~np.isnan(ijisem_sheet_data_preprocess['Year'].unique())]
 
 selected_year = st.pills("2024", unique_year, selection_mode="single", 
                             default =unique_year[-1],label_visibility ='collapsed')
+
+ijisem_sheet_data_preprocess_year = ijisem_sheet_data_preprocess[ijisem_sheet_data_preprocess['Year']== selected_year]
+unique_months = ijisem_sheet_data_preprocess_year['Month'].unique()
+unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B"))
+
 selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", 
                             default =unique_months_sorted[-1],label_visibility ='collapsed')
 
@@ -115,14 +123,18 @@ unique_issue = ijisem_sheet_data_preprocess_filter['Issue'].unique()
 
 with st.container():
     # Display metrics with TRUE counts in value and FALSE counts in delta
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7,border=True)
-    col1.metric(f"Total Papers in {selected_year}", total_papers_year)
-    col2.metric(f"Papers in {selected_month}", total_papers_month)
-    col3.metric("Published", paper_upload, delta=f"-{total_papers_month - paper_upload} Remaining")
-    col4.metric("Review Done", review_process, delta=f"-{total_papers_month - review_process} Remaining")
-    col5.metric("Paper Accepted", acceptence, delta=f"-{total_papers_month - acceptence} Remaining")
-    col6.metric("Formatting", formating, delta=f"-{total_papers_month - formating} not complete")
-    col7.metric("Pyment Received", payment_status, delta=f"-{total_papers_month - payment_status} not received")
+    col1, col2, col3, col4, col5, col6 = st.columns(6,border=True)
+    #col1.metric(f"Total Papers in {selected_year}", total_papers_year)
+    col1.metric(f"Papers in {selected_month}", total_papers_month, delta=f"{total_papers_year} Papers in {selected_year}")
+    col2.metric("Published", paper_upload, delta=f"-{total_papers_month - paper_upload} Remaining")
+    col3.metric("Review Done", review_process, delta=f"-{total_papers_month - review_process} Remaining")
+    col4.metric("Paper Accepted", acceptence, delta=f"-{total_papers_month - acceptence} Remaining")
+    col5.metric("Formatting", formating, delta=f"-{total_papers_month - formating} not complete")
+    col6.metric("Pyment Received", payment_status, delta=f"-{total_papers_month - payment_status} not received")
+
+####################################################################################################
+#####################-----------  Search Papers ----------######################
+###################################################################################################
 
 # Remove null values from unique options
 unique_volume = ijisem_sheet_data_preprocess['Volume'].dropna().unique()
@@ -158,6 +170,41 @@ else:
     st.info("Please fill in both fields to search.")
 
 
+####################################################################################################
+#####################-----------  Line Chart Monthly Books & Authors ----------#####################
+###################################################################################################
+
+
+monthly_counts = ijisem_sheet_data_preprocess_year.groupby(ijisem_sheet_data_preprocess_year['Receiving Date'].dt.month).agg({
+    'Paper ID': 'nunique',
+}).reset_index()
+
+# Rename columns for clarity
+monthly_counts['Month'] = monthly_counts['Receiving Date'].apply(lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'))
+
+monthly_counts = monthly_counts.rename(columns={'Paper ID': 'Total Paper'})
+
+line_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
+    x=alt.X('Month', title='Month', sort = month_order),
+    y=alt.Y('Total Paper', title='Total Count'),
+    color=alt.value("#F3C623")  # Color for Total Books line
+).properties(
+    width=600,
+    height=400
+)
+
+# Add text labels on data points
+total_papers_charts = line_chart.mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-10
+).encode(
+    text='Total Paper:Q'
+)
+
+st.subheader(f"Total Papers in {selected_year}")
+st.caption("Total Papers each month")
+st.altair_chart((line_chart + total_papers_charts), use_container_width=True)
 
 
 

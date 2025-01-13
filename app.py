@@ -84,7 +84,7 @@ def validate_token():
         st.stop()
 
 # Validate token before running the app
-#validate_token()
+validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -627,10 +627,6 @@ monthly_counts['Month'] = pd.Categorical(monthly_counts['Month'], categories=mon
 
 # Sort by the ordered month column
 monthly_counts = monthly_counts.sort_values('Month')
-
-# Melt the data for easier line plotting with color distinction
-monthly_counts_melted = monthly_counts.melt(id_vars='Month', value_vars=['Total Books', 'Total Authors'], 
-                                            var_name='Status', value_name='Count')
 
 st.subheader("Books & Authors in 2024")
 st.caption("Number of books each month")
