@@ -92,7 +92,7 @@ if "visited" not in st.session_state:
 
 # Check if the user is new
 if not st.session_state.visited:
-    st.toast("Please Wait New Data is being fetched...", icon="ℹ️")  # Notify user
+    st.toast("New Data is being fetched..", icon="ℹ️")  # Notify user
     st.cache_data.clear()  # Clear cache for new visitors
     st.session_state.visited = True  # Mark as visited
 
@@ -130,12 +130,9 @@ status_placeholder = st.empty()
 with status_placeholder.container():
     with st.status("Loading Data", expanded=True) as status:
         st.write("Calling Google Sheet API...")
-        mastersheet_data = sheet_to_df(sheets['Mastersheet'])
         operations_sheet_data = sheet_to_df(sheets['Operations'])
         st.write("Processing Data..")
         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
-        st.write("Plotting Graphs..")
-        mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
         status.update(
             label="Data Loaded!", state="complete", expanded=False)
 
@@ -144,13 +141,6 @@ status_placeholder.empty()
 ######################################################################################
 ###########################----------- Data Loader & Spinner ----------#############################
 ######################################################################################
-
-
-# with st.spinner('Loading Data...'):
-#         mastersheet_data = sheet_to_df(sheets['Mastersheet'])
-#         operations_sheet_data = sheet_to_df(sheets['Operations'])
-#         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
-#         mastersheet_data_preprocess = mastersheet_preprocess(mastersheet_data)
 
 unique_year = operations_sheet_data_preprocess['Year'].unique()[~np.isnan(operations_sheet_data_preprocess['Year'].unique())]
 # unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
@@ -200,13 +190,6 @@ with col2:
 ######################################################################################
 
 # Filter DataFrame based on selected month
-
-# ijisem_sheet_data_preprocess_filter = ijisem_sheet_data_preprocess[
-#     (ijisem_sheet_data_preprocess['Receiving Date'].dt.year == selected_year) & 
-#     (ijisem_sheet_data_preprocess['Receiving Date'].dt.strftime('%B') == selected_month)
-# ]
-
-mastersheet_data_preprocess_month = mastersheet_data_preprocess[mastersheet_data_preprocess['Date'].dt.strftime('%B') == selected_month]
 operations_sheet_data_preprocess_month = operations_sheet_data_preprocess_year[operations_sheet_data_preprocess_year['Month']== selected_month]
 
 # Calculate metrics based on both TRUE and FALSE values in the filtered DataFrame
@@ -419,9 +402,9 @@ with col2:
 ####################################################################################################
 
 
-writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess_year, 
+writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess,selected_year,
                                                                                         selected_month)
-proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess_year, 
+proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess,selected_year, 
                                                                                                        selected_month)
 
 
@@ -614,21 +597,13 @@ with col2:
 
 
 # Group by month and count unique 'Book ID's and 'Author ID's
-monthly_counts = mastersheet_data_preprocess.groupby(mastersheet_data_preprocess['Date'].dt.month).agg({
-    'Book ID': 'nunique',
-    'Author Id': 'nunique'
-}).reset_index()
-
-# Rename columns for clarity
-monthly_counts['Month'] = monthly_counts['Date'].apply(lambda x: pd.to_datetime(f"2024-{x}-01").strftime('%B'))
-monthly_counts = monthly_counts.rename(columns={'Book ID': 'Total Books', 'Author Id': 'Total Authors'})
-
-monthly_counts['Month'] = pd.Categorical(monthly_counts['Month'], categories=month_order, ordered=True)
+monthly_book_author_counts = get_monthly_book_author_counts(operations_sheet_data_preprocess_year,month_order)
+monthly_counts = monthly_book_author_counts.rename(columns={'Book ID': 'Total Books', 'Author Id': 'Total Authors'})
 
 # Sort by the ordered month column
 monthly_counts = monthly_counts.sort_values('Month')
 
-st.subheader("Books & Authors in 2024")
+st.subheader(f"Books & Authors in {selected_year}")
 st.caption("Number of books each month")
 # Plot line chart
 # Create an Altair line chart with labels on data points
@@ -684,7 +659,7 @@ counts = {
         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] == 'TRUE']['Book ID'].nunique()
     ],
     "FALSE": [
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing'] == 'FALSE']['Book ID'].nunique(),
+        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] == 'FALSE']['Book ID'].nunique(),
         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] == 'FALSE']['Book ID'].nunique(),
         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Cover Page'] == 'FALSE']['Book ID'].nunique(),
         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Back Page Update'] == 'FALSE']['Book ID'].nunique(),
@@ -701,40 +676,40 @@ bar_data_df = pd.DataFrame(counts).melt(id_vars="Category", var_name="Status", v
 ######################################################################################################
 
 
-# Count both TRUE and FALSE values for each relevant column (Authors Data)
-author_counts = {
-    "Category": [
-        "Welcome Mail / Confirmation", "Author Detail", "Photo", "ID Proof",
-        "Send Cover Page and Agreement", "Agreement Received", "Digital Prof", "Confirmation"
-    ],
-    "TRUE": [
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
-    ],
-    "FALSE": [
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
-        operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
-    ]
-}
+# # Count both TRUE and FALSE values for each relevant column (Authors Data)
+# author_counts = {
+#     "Category": [
+#         "Welcome Mail / Confirmation", "Author Detail", "Photo", "ID Proof",
+#         "Send Cover Page and Agreement", "Agreement Received", "Digital Prof", "Confirmation"
+#     ],
+#     "TRUE": [
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'TRUE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'TRUE']['Author Id'].nunique()
+#     ],
+#     "FALSE": [
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Welcome Mail / Confirmation'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Author Detail'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Photo'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['ID Proof'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Send Cover Page and Agreement'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Agreement Received'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Digital Prof'] == 'FALSE']['Author Id'].nunique(),
+#         operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Confirmation'] == 'FALSE']['Author Id'].nunique()
+#     ]
+# }
 
-# Convert to DataFrame
-author_bar_data_df = pd.DataFrame(author_counts).melt(id_vars="Category", var_name="Status", value_name="Count")
+# # Convert to DataFrame
+# author_bar_data_df = pd.DataFrame(author_counts).melt(id_vars="Category", var_name="Status", value_name="Count")
 
-# Generate the grouped bar charts
+# # Generate the grouped bar charts
 book_bar_chart = create_grouped_bar_chart(bar_data_df, f"Books in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
-author_bar_chart = create_grouped_bar_chart(author_bar_data_df, f"Authors in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
+# author_bar_chart = create_grouped_bar_chart(author_bar_data_df, f"Authors in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
 
 # Display the charts in Streamlit
 st.subheader(f"Books & Authors in {selected_month}")
@@ -743,18 +718,25 @@ with st.container():
     with col1:
         st.altair_chart(book_bar_chart, use_container_width=True)
     with col2:
-        st.altair_chart(author_bar_chart, use_container_width=True)
+        st.write("New Graph comming soon!😊")
+        #st.altair_chart(author_bar_chart, use_container_width=True)
 
 #######################################################################################################
 ###################------------- Horizonrtal bar graph Employee Performance----------##################
 #######################################################################################################
 
 # Monthly data for a specific month
-operations_sheet_data_preprocess_writng_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%B') == selected_month]
+operations_sheet_data_preprocess_writng_month = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%B') == str(selected_month))
+]
 employee_monthly = operations_sheet_data_preprocess_writng_month.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
 # Full year data
-employee_yearly = operations_sheet_data_preprocess.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
+operations_sheet_data_preprocess_writng_year = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%Y') == str(selected_year))
+]
+employee_yearly = operations_sheet_data_preprocess_writng_year.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
 # Altair chart for monthly data with layering of bars and text
 monthly_bars = alt.Chart(employee_monthly).mark_bar(color='#F3C623').encode(
@@ -772,7 +754,7 @@ monthly_text = monthly_bars.mark_text(
 
 # Layer bar and text for monthly chart
 monthly_chart = (monthly_bars + monthly_text).properties(
-    title=f'Books Written by Content Team in {selected_month}',
+    title=f'Books Written by Content Team in {selected_month} {selected_year}',
     width=300,
     height=400
 )
@@ -793,13 +775,13 @@ yearly_text = yearly_bars.mark_text(
 
 # Layer bar and text for yearly chart
 yearly_chart = (yearly_bars + yearly_text).properties(
-    title='Total Books Written by Content Team in 2024',
+    title=f'Total Books Written by Content Team in {selected_year}',
     width=300,
     height=400
 )
 
 # Display charts side by side in Streamlit
-st.subheader("Content Team Performance")
+st.subheader(f"Content Team Performance in {selected_year}")
 #st.caption("Content Team performance in each month and in 2024")
 col1, col2 = st.columns(2)
 
@@ -813,11 +795,18 @@ with col2:
 ###############------------- Bar Chart Formatting & Proofread -----------############
 ######################################################################################
 
-operations_sheet_data_preprocess_proof_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%B') == selected_month]
+operations_sheet_data_preprocess_proof_month = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%B') == str(selected_month))
+]
 proofreading_num = operations_sheet_data_preprocess_proof_month.groupby('Proofreading By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
 proofreading_num.columns = ['Proofreader', 'Book Count']
+
 # Formatting data
-operations_sheet_data_preprocess_format_month = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Formating End Date'].dt.strftime('%B') == 'November']
+operations_sheet_data_preprocess_format_month = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Formating End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (operations_sheet_data_preprocess['Formating End Date'].dt.strftime('%B') == str(selected_month))
+]
 formatting_num = operations_sheet_data_preprocess_format_month.groupby('Formating By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
 formatting_num.columns = ['Formatter', 'Book Count']
 
@@ -828,7 +817,7 @@ proofreading_bar = alt.Chart(proofreading_num).mark_bar().encode(
     color=alt.Color('Proofreader', legend=None),
     tooltip=['Proofreader', 'Book Count']
 ).properties(
-    title=f"Books Proofread in {selected_month}"
+    title=f"Books Proofread in {selected_month} {selected_year}"
 )
 
 # Add labels on top of the bars for Proofreading
@@ -849,7 +838,7 @@ formatting_bar = alt.Chart(formatting_num).mark_bar().encode(
     color=alt.Color('Formatter', legend=None),
     tooltip=['Formatter', 'Book Count']
 ).properties(
-    title=f"Books Formatted in {selected_month}"
+    title=f"Books Formatted in {selected_month} {selected_year}"
 )
 
 # Add labels on top of the bars for Formatting
@@ -877,21 +866,15 @@ with col2:
 ######################################################################################################################
 
 # Group by month and count unique 'Book ID's
-monthly_book_counts =  mastersheet_data_preprocess[mastersheet_data_preprocess['Book ID'] != ''].groupby(mastersheet_data_preprocess['Date'].dt.month)['Book ID'].nunique().reset_index()
+monthly_book_counts =  monthly_book_author_counts[['Month', 'Total Books']]
 monthly_book_counts.columns = ['Month', 'Total Books']
-
-monthly_book_counts['Month'] = monthly_book_counts['Month'].apply(lambda x: month_order[x - 1])
-monthly_book_counts['Month'] = pd.Categorical(monthly_book_counts['Month'], categories=month_order, ordered=True)
 
 # Sort by the ordered month column
 monthly_book_counts = monthly_book_counts.sort_values('Month')
 
 # Group by month and count unique 'Book ID's
-monthly_author_counts =  mastersheet_data_preprocess[mastersheet_data_preprocess['Author Id'] != ''].groupby(mastersheet_data_preprocess['Date'].dt.month)['Author Id'].nunique().reset_index()
+monthly_author_counts =  monthly_book_author_counts[['Month', 'Total Authors']]
 monthly_author_counts.columns = ['Month', 'Total Authors']
-
-monthly_author_counts['Month'] = monthly_author_counts['Month'].apply(lambda x: month_order[x - 1])
-monthly_author_counts['Month'] = pd.Categorical(monthly_author_counts['Month'], categories=month_order, ordered=True)
 
 # Sort by the ordered month column
 monthly_author_counts = monthly_author_counts.sort_values('Month')
@@ -933,7 +916,7 @@ author_text = author_chart.mark_text(
 )
 
 # Display the two charts side by side in a single row
-st.subheader("Monthly Books & Authors in 2024")
+st.subheader(f"Monthly Books & Authors in {selected_year}")
 st.caption("Performance comparison of total books and authors by month")
 
 # Arrange in columns within a container
@@ -949,41 +932,46 @@ with st.container():
 #####################----------- Pie Books and Authors added by Publishing Consultan----------######################
 #####################################################################################################################
 
-# Number of books sold by Publishing Consultant
-books_sold = mastersheet_data_preprocess_month.groupby(['Publishing Consultant'])['Book ID'].nunique().reset_index(name='Books Sold').iloc[1:]
-
 # Number of authors added by Publishing Consultant
-authors_added = mastersheet_data_preprocess_month.groupby(['Publishing Consultant'])['Author Id'].nunique().reset_index(name='Authors Added').iloc[1:]
+authors_added_yearly = operations_sheet_data_preprocess_year[['Publishing Consultant 1','Publishing Consultant 2',
+                                       'Publishing Consultant 3','Publishing Consultant 4',]].apply(pd.Series.value_counts).sum(axis=1).reset_index().rename(columns={'index':'Publishing Consultant',0:'Authors Added'})
+authors_added_yearly['Authors Added'] = authors_added_yearly['Authors Added'].astype(int)
+
+# Number of books sold by Publishing Consultant
+authors_added_montly = operations_sheet_data_preprocess_month[['Publishing Consultant 1','Publishing Consultant 2',
+                                       'Publishing Consultant 3','Publishing Consultant 4',]].apply(pd.Series.value_counts).sum(axis=1).reset_index().rename(columns={'index':'Publishing Consultant',0:'Authors Added'})
+authors_added_montly['Authors Added'] = authors_added_montly['Authors Added'].astype(int)
+
 
 # Plotly Express pie chart for "Books Sold"
-fig_books_sold = px.pie(
-    books_sold,
+fig_authors_added_montly = px.pie(
+    authors_added_montly,
     names="Publishing Consultant",
-    values="Books Sold",
-    title=f"Books Enrolled in {selected_month}",
+    values="Authors Added",
+    title=f"Authors Enrolled in {selected_month} {selected_year}",
     hole = 0.45,
     color_discrete_sequence=['#4C78A8', '#F3C623']  # Custom color scheme
 )
-fig_books_sold.update_traces(textinfo='label+value', insidetextorientation='radial')
+fig_authors_added_montly.update_traces(textinfo='label+value', insidetextorientation='radial')
 
 # Plotly Express pie chart for "Authors Added"
-fig_authors_added = px.pie(
-    authors_added,
+fig_authors_added_yearly = px.pie(
+    authors_added_yearly,
     names="Publishing Consultant",
     values="Authors Added",
-    title=f"Authors Enrolled in {selected_month}",
+    title=f"Authors Enrolled in {selected_year}",
     hole = 0.45,
     color_discrete_sequence=['#4C78A8', '#F3C623'] # Custom color scheme
 )
-fig_authors_added.update_traces(textinfo='label+value', insidetextorientation='radial')
+fig_authors_added_yearly.update_traces(textinfo='label+value', insidetextorientation='radial')
 
 # Display in Streamlit
-st.subheader(f"Publishing Consultant Performance in {selected_month}")
+st.subheader(f"Publishing Consultant Performance in {selected_month} {selected_year}")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.plotly_chart(fig_books_sold, use_container_width=True)
+    st.plotly_chart(fig_authors_added_montly, use_container_width=True)
 
 with col2:
-    st.plotly_chart(fig_authors_added, use_container_width=True)
+    st.plotly_chart(fig_authors_added_yearly, use_container_width=True)
     

@@ -187,7 +187,7 @@ monthly_counts = monthly_counts.rename(columns={'Paper ID': 'Total Paper'})
 line_chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
     x=alt.X('Month', title='Month', sort = month_order),
     y=alt.Y('Total Paper', title='Total Count'),
-    color=alt.value("#F3C623")  # Color for Total Books line
+    color=alt.value("#5499de")  # Color for Total Books line
 ).properties(
     width=600,
     height=400

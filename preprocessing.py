@@ -34,21 +34,21 @@ def sheet_to_df(sheet_id):
     return pd.DataFrame(data)
 
 
-def mastersheet_preprocess(df):
+# def mastersheet_preprocess(df):
 
-    cols = ['Date','Book ID', 'Writing', 'Apply ISBN', 'ISBN', 'Cover Page', 'Back Page Update', 'Ready to Print','Print',
-        'Amazon Link', 'AGPH Link', 'Google Link', 'Flipkart Link','Final Mail', 'Deliver', 'Google Review' ]
+#     cols = ['Date','Book ID', 'Writing', 'Apply ISBN', 'ISBN', 'Cover Page', 'Back Page Update', 'Ready to Print','Print',
+#         'Amazon Link', 'AGPH Link', 'Google Link', 'Flipkart Link','Final Mail', 'Deliver', 'Google Review' ]
 
-    for i in cols:
-        df[i] = df[i].shift(-1)
+#     for i in cols:
+#         df[i] = df[i].shift(-1)
 
-    df['Date'] = pd.to_datetime(df['Date'],  format= "%d/%m/%Y")
-    df['Book ID'] = pd.to_numeric(df['Book ID'], errors='coerce')
-    df['Date'] = df['Date'].ffill()
-    df['Book ID'] = df['Book ID'].ffill()
-    df = df[df['Date'].dt.year == 2024]
+#     df['Date'] = pd.to_datetime(df['Date'],  format= "%d/%m/%Y")
+#     df['Book ID'] = pd.to_numeric(df['Book ID'], errors='coerce')
+#     df['Date'] = df['Date'].ffill()
+#     df['Book ID'] = df['Book ID'].ffill()
+#     df = df[df['Date'].dt.year == 2024]
 
-    return df
+#     return df
 
 def operations_preprocess(data):
     import pandas as pd
@@ -163,8 +163,11 @@ def work_done_status(df):
 ################-----------  Writing & Proofreading complete in this Month ----------##############
 ####################################################################################################
 
-def proofreading_complete(data,selected_month):
-    proofreading_complete = data[data['Proofreading End Date'].dt.strftime('%B') == selected_month]
+def proofreading_complete(data,selected_year,selected_month):
+    proofreading_complete = data[
+    (data['Proofreading End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (data['Proofreading End Date'].dt.strftime('%B') == str(selected_month))
+]
     proofreading_complete = proofreading_complete[proofreading_complete['Proofreading Complete'] == 'TRUE']
     proofreading_complete = proofreading_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
                                                    'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time',
@@ -175,8 +178,11 @@ def proofreading_complete(data,selected_month):
 
     return proofreading_complete, count
 
-def writing_complete(data,selected_month):
-    writing_complete = data[data['Writing End Date'].dt.strftime('%B') == selected_month]
+def writing_complete(data,selected_year,selected_month):
+    writing_complete = data[
+    (data['Writing End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (data['Writing End Date'].dt.strftime('%B') == str(selected_month))
+]
     writing_complete = writing_complete[writing_complete['Writing Complete'] == 'TRUE']
     writing_complete = writing_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
                                                    'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']]
@@ -214,3 +220,29 @@ def create_grouped_bar_chart(data, title, color_scheme):
     )
     
     return bars + text
+
+####################################################################################################
+#####################-----------  Line Chart Monthly Books & Authors ----------######################
+###################################################################################################
+
+#More robust version with your original code integrated:
+def get_monthly_book_author_counts(df,month_order):
+    """Calculates and combines monthly book and author counts into a single DataFrame."""
+    if df.empty:
+        return pd.DataFrame(columns=['Month', 'Total Books', 'Total Authors']) # Return empty DataFrame if input is empty
+    try:
+        monthly_book_counts = df[df['Book ID'] != ''].groupby('Month')['Book ID'].nunique().reset_index()
+        monthly_book_counts.columns = ['Month', 'Total Books']
+
+        monthly_author_counts = df.groupby('Month')['No of Author'].sum().reset_index()
+        monthly_author_counts.columns = ['Month', 'Total Authors']
+
+        monthly_data = pd.merge(monthly_book_counts, monthly_author_counts, on='Month', how='outer')
+        monthly_data['Month'] = pd.Categorical(monthly_data['Month'], categories=month_order, ordered=True)
+        return monthly_data
+    except KeyError as e:
+        print(f"Error: Column '{e}' not found in DataFrame.")
+        return pd.DataFrame(columns=['Month', 'Total Books', 'Total Authors']) # Return empty DataFrame if error
+    except AttributeError as e:
+        print(f"Error: Likely a problem with the 'Date' column format. Ensure it's datetime. Details: {e}")
+        return pd.DataFrame(columns=['Month', 'Total Books', 'Total Authors']) # Return empty DataFrame if error
