@@ -84,7 +84,7 @@ def validate_token():
         st.stop()
 
 # Validate token before running the app
-validate_token()
+#validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -151,39 +151,43 @@ month_order = [
     "July", "August", "September", "October", "November", "December"
 ]
 
-selected_year = st.pills("2024", unique_year, selection_mode="single", 
-                            default =unique_year[-1],label_visibility ='collapsed')
+col1, col2, col3 = st.columns([2,14, 2])  # Adjust column widths as needed
 
+with col1:
+    selected_year = st.pills("2024", unique_year, selection_mode="single", 
+                            default =unique_year[-1],label_visibility ='collapsed')
+    
 operations_sheet_data_preprocess_year = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Year']== selected_year]
 unique_months_selected_year = operations_sheet_data_preprocess_year['Month'].unique() 
 
-col1, col2 = st.columns([14, 2])  # Adjust column widths as needed
-
-with col1:
-    selected_month = st.pills("2024", unique_months_selected_year, selection_mode="single", 
-                              default =unique_months_selected_year[-1],label_visibility ='collapsed')
 
 with col2:
-    if adsearch_url:
-        adsearch_clicked = st.markdown(
-        f"""
-        <a href="{adsearch_url}" target="_blank" style="text-decoration: none;">
-            <button style="
-                background-color: #ffffff;
-                color: black;
-                border:  0.2px solid;
-                border-color: #b3abab;
-                padding: 6px 10px;
-                text-align: center;
-                font-size: 13.5px;
-                cursor: pointer;
-                border-radius: 55px;">
-                Search Books 🔍
-            </button>
-        </a>
-        """,
-        unsafe_allow_html=True
-    )
+        selected_month = st.pills("2024", unique_months_selected_year, selection_mode="single", 
+                              default =unique_months_selected_year[-1],label_visibility ='collapsed')
+
+        
+with col3:
+        if adsearch_url:
+            adsearch_clicked = st.markdown(
+            f"""
+            <a href="{adsearch_url}" target="_blank" style="text-decoration: none;">
+                <button style="
+                    background-color: #ffffff;
+                    color: black;
+                    border:  0.2px solid;
+                    border-color: #b3abab;
+                    padding: 6px 10px;
+                    text-align: center;
+                    font-size: 13.5px;
+                    cursor: pointer;
+                    border-radius: 55px;">
+                    Search Books 🔍
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
     
 ######################################################################################
 #####################----------- Metrics of Selected Month ----------######################
