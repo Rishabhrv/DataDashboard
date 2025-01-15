@@ -84,7 +84,7 @@ def validate_token():
         st.stop()
 
 # Validate token before running the app
-#validate_token()
+validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -299,8 +299,8 @@ status_messages = [
 # Display each status section with count, emoji, and data
 for status in status_messages:
     st.markdown(
-        f"<h4>{status['emoji']} {status['count']} Books in {status['label']} Today "
-        f"<span class='status-badge'>Status: Running</span></h4>", 
+        f"<h5>{status['emoji']} {status['count']} Books in {status['label']} Today "
+        f"<span class='status-badge'>Status: Running</span></h5>", 
         unsafe_allow_html=True
     )
     st.dataframe(status['data'], use_container_width=True, hide_index=True)
@@ -314,8 +314,8 @@ work_done_status = work_done_status(operations_sheet_data_preprocess)
 
 # Display the last 45 days data section with count, emoji, and title
 st.markdown(
-    f"<h4>✅ Work done on {work_done_status['Book ID'].nunique()} Books on Previous day & Today"
-    f"<span class='status-badge'>Status: Done!</span></h4>", 
+    f"<h5>✅ Work done on {work_done_status['Book ID'].nunique()} Books on Previous day & Today"
+    f"<span class='status-badge'>Status: Done!</span></h5>", 
     unsafe_allow_html=True)
 
 st.dataframe(work_done_status, use_container_width=False, hide_index=True, column_config = {
@@ -385,7 +385,7 @@ col1, col2 = st.columns(2)
 # Display writing remaining data in the first column
 with col1:
     st.markdown(
-        f"<h4>✍️ {writing_remaining_count} Books in Writing Remaining "
+        f"<h5>✍️ {writing_remaining_count} Books Writing Remaining "
         f"<span class='status-badge'>Status: Remaining</span></h4>", 
         unsafe_allow_html=True
     )
@@ -394,8 +394,8 @@ with col1:
 # Display proofreading remaining data in the second column
 with col2:
     st.markdown(
-        f"<h4>📖 {proofread_remaining_count} Books in Proofreading Remaining "
-        f"<span class='status-badge'>Status: Remaining</span></h4>", 
+        f"<h5>📖 {proofread_remaining_count} Books Proofreading Remaining "
+        f"<span class='status-badge'>Status: Remaining</span></h5>", 
         unsafe_allow_html=True
     )
     st.dataframe(proofread_remaining_data, use_container_width=False, hide_index=True)
@@ -437,8 +437,8 @@ col1, col2 = st.columns(2)
 # Display writing remaining data in the first column
 with col1:
     st.markdown(
-        f"<h4>✍️ {writing_complete_data_by_month_count} Books Written in {selected_month}"
-        f"<span class='status-badge'>Status: Done!</span></h4>", 
+        f"<h5>✍️ {writing_complete_data_by_month_count} Books Written in {selected_month}"
+        f"<span class='status-badge'>Status: Done!</span></h5>", 
         unsafe_allow_html=True
     )
     st.dataframe(writing_complete_data_by_month, use_container_width=False, hide_index=True)
@@ -446,8 +446,8 @@ with col1:
 # Display proofreading remaining data in the second column
 with col2:
     st.markdown(
-        f"<h4>📖 {proofreading_complete_data_by_month_count} Books Proofreaded in {selected_month} "
-        f"<span class='status-badge'>Status: Done!</span></h4>", 
+        f"<h5>📖 {proofreading_complete_data_by_month_count} Books Proofreaded in {selected_month} "
+        f"<span class='status-badge'>Status: Done!</span></h5>", 
         unsafe_allow_html=True
     )
     st.dataframe(proofreading_complete_data_by_month, use_container_width=False, hide_index=True)
@@ -501,8 +501,8 @@ fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month
 
 # Display the last 45 days data section with count, emoji, and title
 st.markdown(
-    f"<h4>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
-    f"<span class='status-badge'>Status: On Hold</span></h4>", 
+    f"<h5>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
+    f"<span class='status-badge'>Status: On Hold</span></h5>", 
     unsafe_allow_html=True
 )
 
@@ -560,7 +560,7 @@ col1, col2 = st.columns([1.5, 1])
 
 # Display DataFrame in the first column
 with col1:
-    st.markdown("#### 📋 Data")
+    st.markdown("##### 📋 Data")
     st.dataframe(styled_df, use_container_width=True, hide_index=True,column_config = {
         "Send Cover Page and Agreement": st.column_config.CheckboxColumn(
             "Send Cover Page and Agreement",
@@ -590,7 +590,7 @@ with col1:
 
 # Display the pie chart in the second column
 with col2:
-    st.markdown("#### 📊 Pie Chart")
+    st.markdown("##### 📊 Pie Chart")
     st.plotly_chart(pie_chart, use_container_width=True)
 
 
@@ -607,7 +607,7 @@ monthly_counts = monthly_book_author_counts.rename(columns={'Book ID': 'Total Bo
 # Sort by the ordered month column
 monthly_counts = monthly_counts.sort_values('Month')
 
-st.subheader(f"Books & Authors in {selected_year}")
+st.subheader(f"📚 Books & Authors in {selected_year}")
 st.caption("Number of books each month")
 # Plot line chart
 # Create an Altair line chart with labels on data points
@@ -716,7 +716,7 @@ book_bar_chart = create_grouped_bar_chart(bar_data_df, f"Books in {selected_mont
 # author_bar_chart = create_grouped_bar_chart(author_bar_data_df, f"Authors in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
 
 # Display the charts in Streamlit
-st.subheader(f"Books & Authors in {selected_month}")
+st.subheader(f"📚 Books & Authors in {selected_month}")
 with st.container():
     _, col1, col2, _ = st.columns([0.009, 1, 1, 0.009])
     with col1:
@@ -785,7 +785,7 @@ yearly_chart = (yearly_bars + yearly_text).properties(
 )
 
 # Display charts side by side in Streamlit
-st.subheader(f"Content Team Performance in {selected_year}")
+st.subheader(f"📝 Content Team Performance in {selected_year}")
 #st.caption("Content Team performance in each month and in 2024")
 col1, col2 = st.columns(2)
 
@@ -920,7 +920,7 @@ author_text = author_chart.mark_text(
 )
 
 # Display the two charts side by side in a single row
-st.subheader(f"Monthly Books & Authors in {selected_year}")
+st.subheader(f"📅 Monthly Books & Authors in {selected_year}")
 st.caption("Performance comparison of total books and authors by month")
 
 # Arrange in columns within a container
@@ -970,7 +970,7 @@ fig_authors_added_yearly = px.pie(
 fig_authors_added_yearly.update_traces(textinfo='label+value', insidetextorientation='radial')
 
 # Display in Streamlit
-st.subheader(f"Publishing Consultant Performance in {selected_month} {selected_year}")
+st.subheader(f"💼 Publishing Consultant Performance in {selected_month} {selected_year}")
 col1, col2 = st.columns(2)
 
 with col1:

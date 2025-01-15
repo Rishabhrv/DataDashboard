@@ -91,14 +91,18 @@ month_order = [
 
 unique_year = ijisem_sheet_data_preprocess['Year'].unique()[~np.isnan(ijisem_sheet_data_preprocess['Year'].unique())]
 
-selected_year = st.pills("2024", unique_year, selection_mode="single", 
+col1, col2 = st.columns([2, 8])  # Adjust column widths as needed
+
+with col1:
+    selected_year = st.pills("2024", unique_year, selection_mode="single", 
                             default =unique_year[-1],label_visibility ='collapsed')
 
 ijisem_sheet_data_preprocess_year = ijisem_sheet_data_preprocess[ijisem_sheet_data_preprocess['Year']== selected_year]
 unique_months = ijisem_sheet_data_preprocess_year['Month'].unique()
 unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B"))
 
-selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", 
+with col2:
+    selected_month = st.pills("2024", unique_months_sorted, selection_mode="single", 
                             default =unique_months_sorted[-1],label_visibility ='collapsed')
 
 ijisem_sheet_data_preprocess_filter = ijisem_sheet_data_preprocess[
