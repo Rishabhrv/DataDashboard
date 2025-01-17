@@ -90,6 +90,10 @@ validate_token()
 if "visited" not in st.session_state:
     st.session_state.visited = False
 
+# Check if the session state variable 'first_visit' is set, indicating the first visit
+if 'first_visit' not in st.session_state:
+    st.session_state.first_visit = True 
+
 # Check if the user is new
 if not st.session_state.visited:
     st.toast("New Data is being fetched..", icon="ℹ️")  # Notify user
@@ -142,6 +146,7 @@ status_placeholder.empty()
 ###########################----------- Data Loader & Spinner ----------#############################
 ######################################################################################
 
+
 unique_year = operations_sheet_data_preprocess['Year'].unique()[~np.isnan(operations_sheet_data_preprocess['Year'].unique())]
 # unique_months_sorted = sorted(unique_months, key=lambda x: datetime.strptime(x, "%B")) # Get unique month names
 
@@ -150,6 +155,23 @@ month_order = [
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
 ]
+
+from datetime import datetime, timedelta
+today = datetime.today().date()
+current_year = datetime.now().year
+current_month = datetime.now().strftime("%B")
+num_book_today = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Date'] == pd.Timestamp(today)]
+
+# Show the toast and balloons only on the first visit
+if st.session_state.first_visit:
+    if len(num_book_today) > 0:
+        st.toast(f"{len(num_book_today)} New Book{'s' if len(num_book_today) > 1 else ''} Enrolled Today!", icon="🎉")
+        st.balloons()  # Trigger the balloons animation
+    else:
+        st.toast("No New Books Enrolled Today!", icon="😔")
+        time.sleep(2)
+    
+    st.session_state.first_visit = False
 
 col1, col2, col3 = st.columns([2,14, 2])  # Adjust column widths as needed
 
@@ -200,6 +222,16 @@ operations_sheet_data_preprocess_month = operations_sheet_data_preprocess_year[o
 
 total_authors = operations_sheet_data_preprocess_month['No of Author'].sum()
 total_books= len(np.array(operations_sheet_data_preprocess_month['Book ID'].unique())[np.array(operations_sheet_data_preprocess_month['Book ID'].unique()) !=''])
+today_num_books = len(num_book_today)
+today_num_authors = num_book_today['No of Author'].sum()
+
+# Check if the user has selected the current year and month
+if selected_year == current_year and selected_month == current_month:
+    delta_books = f"-{abs(today_num_books)} added today" if today_num_books < 1 else str(today_num_books) + " added today"
+    delta_authors = f"-{abs(today_num_authors)} added today" if today_num_authors < 1 else str(today_num_authors) + " added today"
+else:
+    delta_books = None
+    delta_authors = None
 
 books_written_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] == 'TRUE']['Book ID'].nunique()
 books_proofread_true = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Proofreading Complete'] == 'TRUE']['Book ID'].nunique()
@@ -218,8 +250,8 @@ st.subheader(f"Metrics of {selected_month}")
 with st.container():
     # Display metrics with TRUE counts in value and FALSE counts in delta
     col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
-    col1.metric("Total Books", total_books)
-    col2.metric("Total Authors", total_authors)
+    col1.metric("Total Books", total_books,delta=delta_books)
+    col2.metric("Total Authors", total_authors, delta=delta_authors)
     col3.metric("Written", books_written_true, delta=f"-{total_books - books_written_true} Remaining")
     col4.metric("Proofread", books_proofread_true, delta=f"-{books_written_true - books_proofread_true} Remaining")
     col5.metric("Formatting", books_formatted_true, delta=f"-{books_proofread_true - books_formatted_true} Remaining")
@@ -402,15 +434,18 @@ with col2:
 
 
 ####################################################################################################
-################-----------  Writing & Proofreading complete in this Month ----------##############
+################-----------  Writing complete in this Month ----------##############
 ####################################################################################################
 
 
 writing_complete_data_by_month, writing_complete_data_by_month_count = writing_complete(operations_sheet_data_preprocess,selected_year,
                                                                                         selected_month)
-proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess,selected_year, 
-                                                                                                       selected_month)
-
+# Monthly data for a specific month
+operations_sheet_data_preprocess_writng_month = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (operations_sheet_data_preprocess['Writing End Date'].dt.strftime('%B') == str(selected_month))
+]
+employee_monthly = operations_sheet_data_preprocess_writng_month.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
 # CSS for the "Status" badge style
 st.markdown("""
@@ -431,8 +466,30 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Altair chart for monthly data with layering of bars and text
+monthly_bars = alt.Chart(employee_monthly).mark_bar().encode(
+    x=alt.X('Book ID:Q', title='Number of Books'),
+    y=alt.Y('Writing By:N', title='Employee', sort='-x'),
+    color=alt.Color('Book ID:Q', scale=alt.Scale(scheme='blues'), legend=None),
+)
+
+# Add text labels to the monthly bars
+monthly_text = monthly_bars.mark_text(
+    align='left',
+    dx=5 
+).encode(
+    text='Book ID:Q'
+)
+
+# Layer bar and text for monthly chart
+monthly_chart = (monthly_bars + monthly_text).properties(
+    #title=f'Books Written by Content Team in {selected_month} {selected_year}',
+    width=300,
+    height=390
+)
+
 # Define two columns to display dataframes side by side
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1.4,1])
 
 # Display writing remaining data in the first column
 with col1:
@@ -443,8 +500,59 @@ with col1:
     )
     st.dataframe(writing_complete_data_by_month, use_container_width=False, hide_index=True)
 
-# Display proofreading remaining data in the second column
 with col2:
+    st.markdown(
+        f"<h5>   ✍️ Book count by Team"
+        f"<span class='status-badge'>Status: Done!</span></h5>", 
+        unsafe_allow_html=True
+    )
+    st.altair_chart(monthly_chart, use_container_width=True)
+
+
+
+####################################################################################################
+################-----------  Proofreading complete in this Month ----------##############
+####################################################################################################
+
+proofreading_complete_data_by_month, proofreading_complete_data_by_month_count = proofreading_complete(operations_sheet_data_preprocess,selected_year, 
+                                                                                                       selected_month)
+operations_sheet_data_preprocess_proof_month = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%Y') == str(selected_year)) & 
+    (operations_sheet_data_preprocess['Proofreading End Date'].dt.strftime('%B') == str(selected_month))
+]
+proofreading_num = operations_sheet_data_preprocess_proof_month.groupby('Proofreading By')['Book ID'].count().reset_index().sort_values(by='Book ID', ascending=False)
+proofreading_num.columns = ['Proofreader', 'Book Count']
+cleaned_proofreading_num = proofreading_num[['Proofreader', 'Book Count']]
+
+# Create the horizontal bar chart for Proofreading
+proofreading_bar = alt.Chart(proofreading_num).mark_bar().encode(
+    y=alt.Y('Proofreader', sort='-x', title='Proofreader'),  # Change x to y for horizontal bars
+    x=alt.X('Book Count', title='Book Count'),  # Change y to x for horizontal bars
+    color=alt.Color('Proofreader', scale=alt.Scale(scheme='blueorange'), legend=None),
+    tooltip=['Proofreader', 'Book Count']
+).properties(
+    #title=f"Books Proofread in {selected_month} {selected_year}"
+)
+
+# Add labels on the right side of the bars for Proofreading
+proofreading_text = proofreading_bar.mark_text(
+    dx=10,  # Adjusts the position of the text to the right of the bar
+    color='black'
+).encode(
+    text='Book Count:Q'
+)
+
+proofreading_chart = (proofreading_bar + proofreading_text).properties(
+    #title=f'Books Written by Content Team in {selected_month} {selected_year}',
+    width=300,
+    height=390
+)
+
+
+col1, col2 = st.columns([1.4,1])
+
+# Display proofreading remaining data in the first column
+with col1:
     st.markdown(
         f"<h5>📖 {proofreading_complete_data_by_month_count} Books Proofreaded in {selected_month} "
         f"<span class='status-badge'>Status: Done!</span></h5>", 
@@ -452,15 +560,22 @@ with col2:
     )
     st.dataframe(proofreading_complete_data_by_month, use_container_width=False, hide_index=True)
 
+# Display heading and chart in the second column with proper layout
+with col2:
+        st.markdown(
+            f"<h5>📖 Book count by Team "
+            f"<span class='status-badge'>Status: Done!</span></h5>", 
+            unsafe_allow_html=True
+        )
+        st.altair_chart(proofreading_chart, use_container_width=True)
+        #st.plotly_chart(proofreading_donut, use_container_width=True)
+
 
 ######################################################################################
 ######################------------- 40 days data-------------#########################
 ######################################################################################
 
 import datetime
-
-# Calculate today and 45 days ago as datetime.date objects
-today = datetime.date.today()
 forty_five_days_ago = pd.Timestamp(today - datetime.timedelta(days=40))  # Convert to pandas Timestamp
 
 # Filter the DataFrame
@@ -471,6 +586,24 @@ fortifiveday = operations_sheet_data_preprocess[
 # Further filter the DataFrame based on the 'Deliver' column
 fortifiveday_status = fortifiveday[fortifiveday['Deliver'] == 'FALSE']
 
+fortifiveday_status_months = list(fortifiveday_status['Month'].unique())
+fortifiveday_status_months.append("Total") 
+
+# Display the last 45 days data section with count, emoji, and title
+st.markdown(
+    f"<h5>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
+    f"<span class='status-badge'>Status: On Hold</span></h5>", 
+    unsafe_allow_html=True
+)
+
+fortifiveday_status_selected_month = st.pills("2024", fortifiveday_status_months, selection_mode="single", 
+                              default =fortifiveday_status_months[-1],label_visibility ='collapsed')
+
+# Filter based on the selected month, or show all data if "All" is selected
+if fortifiveday_status_selected_month == "Total":
+    fortifiveday_status_by_month = fortifiveday_status
+else:
+    fortifiveday_status_by_month = fortifiveday_status[fortifiveday_status['Month'] == fortifiveday_status_selected_month]
 
 # Define the columns in processing order and their readable names
 status_columns = {
@@ -491,23 +624,16 @@ def find_stuck_stage(row):
     return 'Not Dispatched'  # Shouldn't occur, as we filtered by Deliver == FALSE
 
 # Apply the function to create a 'Stuck Stage' column
-fortifiveday_status['Reason For Hold'] = fortifiveday_status.apply(find_stuck_stage, axis=1)
+fortifiveday_status_by_month['Reason For Hold'] = fortifiveday_status_by_month.apply(find_stuck_stage, axis=1)
 
-fortifiveday_status = fortifiveday_status[['Book ID', 'Book Title','Date','Month','Since Enrolled','No of Author',
+fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Month','Since Enrolled','No of Author',
                                            'Reason For Hold','Writing End Date','Proofreading End Date',
                                            'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
 
-# Display the last 45 days data section with count, emoji, and title
-st.markdown(
-    f"<h5>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
-    f"<span class='status-badge'>Status: On Hold</span></h5>", 
-    unsafe_allow_html=True
-)
-
 # Prepare the reason counts data
-reason_counts = fortifiveday_status['Reason For Hold'].value_counts().reset_index()
+reason_counts = fortifiveday_status_by_month['Reason For Hold'].value_counts().reset_index()
 reason_counts.columns = ['Reason For Hold', 'Count']
 
 def number_to_color(number):
@@ -521,7 +647,7 @@ def reason_to_color(reason, color_map):
     return f'{color}; color: black'
 
 # Get unique reasons
-unique_reasons = fortifiveday_status['Reason For Hold'].unique()
+unique_reasons = fortifiveday_status_by_month['Reason For Hold'].unique()
 
 # Generate a color palette using Streamlit's theme
 color_palette = sns.color_palette("Set2", len(unique_reasons)).as_hex()
@@ -530,7 +656,7 @@ color_palette = sns.color_palette("Set2", len(unique_reasons)).as_hex()
 color_map = {reason: f'background-color: {color}' for reason, color in zip(unique_reasons, color_palette)}
 
 # Apply color to 'Since Enrolled' column
-styled_df = fortifiveday_status.style.applymap(
+styled_df = fortifiveday_status_by_month.style.applymap(
    number_to_color,
     subset=['Since Enrolled']
 )
@@ -560,7 +686,7 @@ col1, col2 = st.columns([1.5, 1])
 
 # Display DataFrame in the first column
 with col1:
-    st.markdown("##### 📋 Data")
+    st.markdown(f"##### 📋 {fortifiveday_status_by_month['Book ID'].nunique()} Books on hold in {fortifiveday_status_selected_month}")
     st.dataframe(styled_df, use_container_width=True, hide_index=True,column_config = {
         "Send Cover Page and Agreement": st.column_config.CheckboxColumn(
             "Send Cover Page and Agreement",
@@ -592,6 +718,74 @@ with col1:
 with col2:
     st.markdown("##### 📊 Pie Chart")
     st.plotly_chart(pie_chart, use_container_width=True)
+
+
+###################################################################################################################
+#####################----------- Recently added books----------######################
+#####################################################################################################################
+
+recent_books_data = operations_sheet_data_preprocess[['Book ID', 'Book Title', 'Date', 'No of Author']]
+
+# Adding "This Month" option
+option = st.radio(
+    "Select Time Range",
+    ["Today", "Yesterday", "Last 10 Days", "This Month"],index =3,
+    horizontal=True, label_visibility="hidden"
+)
+
+
+# Filter data based on the selected option
+if option == "Today":
+    filtered_df = num_book_today[['Book ID', 'Book Title', 'Date', 'No of Author']]
+    heading = f"New Book Enrolled {today}"
+elif option == "Yesterday":
+    yesterday = today - timedelta(days=1)
+    filtered_df = recent_books_data[recent_books_data['Date'] == pd.Timestamp(yesterday)]
+    heading = f"Books Enrolled Yesterday {yesterday}"
+elif option == "Last 10 Days":
+    last_10_days = today - timedelta(days=10)
+    filtered_df = recent_books_data[recent_books_data['Date'] >= pd.Timestamp(last_10_days)]
+    heading = f"Books Enrolled in the Last 10 Days (Since {last_10_days})"
+else:  # This Month
+    filtered_df = operations_sheet_data_preprocess_month[['Book ID', 'Book Title', 'Date', 'No of Author']]
+    heading = f"Books Enrolled in {selected_month} {selected_year}"
+
+# Display heading with count
+book_count = len(filtered_df)
+books_per_day = filtered_df.groupby('Date').size().reset_index(name='Books Enrolled')
+
+
+# Create an Altair line chart
+line_chart_number_book = alt.Chart(books_per_day).mark_line().encode(
+    x='Date:T',  # T is for temporal encoding (dates)
+    y='Books Enrolled:Q',  
+    color=alt.value("#4C78A8"),# Q is for quantitative encoding (the count of books)
+    tooltip=['Date:T', 'Books Enrolled:Q'],
+).properties(
+    title="Books Enrolled Per Day"
+)
+
+# Add text labels on data points
+text_line_chart_number_book = line_chart_number_book.mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-10
+).encode(
+    text='Books Enrolled:Q'
+)
+
+col1, col2 = st.columns([1.1,1])
+
+with col1:
+    st.markdown(
+    f"<h5>📖 {book_count} {heading}", 
+    unsafe_allow_html=True
+)
+    st.dataframe(filtered_df,hide_index=True, use_container_width=True)
+
+with col2:
+    st.altair_chart((line_chart_number_book+text_line_chart_number_book), use_container_width=True,theme="streamlit")
+
 
 
 
@@ -978,4 +1172,9 @@ with col1:
 
 with col2:
     st.plotly_chart(fig_authors_added_yearly, use_container_width=True)
+
+
+
+
+
     
