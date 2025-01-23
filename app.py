@@ -321,6 +321,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# CSS for the "Status" badge style
+st.markdown("""
+    <style>
+    .status-badge-red {
+        background-color: #e6e6e6;
+        color:rgb(252, 84, 84);
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 0.9em;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 5px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # Define the icon and message for each status
 status_messages = [
     {"emoji": "✍️", "label": "Writing", "count": len(results['Writing']), "data": results['Writing']},
@@ -392,24 +409,6 @@ def proofread_remaining(data):
 writing_remaining_data,writing_remaining_count = writing_remaining(operations_sheet_data_preprocess)
 proofread_remaining_data,proofread_remaining_count = proofread_remaining(operations_sheet_data_preprocess)
 
-# CSS for the "Status" badge style
-st.markdown("""
-    <style>
-    .status-badge {
-        background-color: #e6e6e6;
-        color: #4CAF50;
-        padding: 3px 8px;
-        border-radius: 5px;
-        font-size: 0.9em;
-        font-weight: bold;
-        display: inline-block;
-        margin-left: 5px;
-    }
-    h4 {
-        font-size: 1.1em;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 # Define two columns to display dataframes side by side
 col1, col2 = st.columns(2)
@@ -418,7 +417,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown(
         f"<h5>✍️ {writing_remaining_count} Books Writing Remaining "
-        f"<span class='status-badge'>Status: Remaining</span></h4>", 
+        f"<span class='status-badge-red'>Status: Remaining</span></h4>", 
         unsafe_allow_html=True
     )
     st.dataframe(writing_remaining_data, use_container_width=False, hide_index=True)
@@ -427,7 +426,7 @@ with col1:
 with col2:
     st.markdown(
         f"<h5>📖 {proofread_remaining_count} Books Proofreading Remaining "
-        f"<span class='status-badge'>Status: Remaining</span></h5>", 
+        f"<span class='status-badge-red'>Status: Remaining</span></h5>", 
         unsafe_allow_html=True
     )
     st.dataframe(proofread_remaining_data, use_container_width=False, hide_index=True)
@@ -447,24 +446,6 @@ operations_sheet_data_preprocess_writng_month = operations_sheet_data_preprocess
 ]
 employee_monthly = operations_sheet_data_preprocess_writng_month.groupby('Writing By').count()['Book ID'].reset_index().sort_values(by='Book ID', ascending=True)
 
-# CSS for the "Status" badge style
-st.markdown("""
-    <style>
-    .status-badge {
-        background-color: #e6e6e6;
-        color: #4CAF50;
-        padding: 3px 8px;
-        border-radius: 5px;
-        font-size: 0.9em;
-        font-weight: bold;
-        display: inline-block;
-        margin-left: 5px;
-    }
-    h4 {
-        font-size: 1.1em;
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 # Altair chart for monthly data with layering of bars and text
 monthly_bars = alt.Chart(employee_monthly).mark_bar().encode(
@@ -592,7 +573,7 @@ fortifiveday_status_months.append("Total")
 # Display the last 45 days data section with count, emoji, and title
 st.markdown(
     f"<h5>📅 {fortifiveday_status['Book ID'].nunique()} Books on hold older than 40 days"
-    f"<span class='status-badge'>Status: On Hold</span></h5>", 
+    f"<span class='status-badge-red'>Status: On Hold</span></h5>", 
     unsafe_allow_html=True
 )
 
@@ -627,7 +608,7 @@ def find_stuck_stage(row):
 fortifiveday_status_by_month['Reason For Hold'] = fortifiveday_status_by_month.apply(find_stuck_stage, axis=1)
 
 fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Month','Since Enrolled','No of Author',
-                                           'Reason For Hold','Writing End Date','Proofreading End Date',
+                                           'Reason For Hold','Publishing Consultant 1','Writing End Date','Proofreading End Date',
                                            'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
@@ -1175,6 +1156,54 @@ with col2:
 
 
 
+if selected_year == 2024:
+    operations_sheet_data_preprocess_year["duration_days"] = (
+    operations_sheet_data_preprocess_year["Formating End Date"] - operations_sheet_data_preprocess_year["Writing Start Date"]
+    ).dt.days
 
+    # Extract the month name from the Writing Start Date
+    operations_sheet_data_preprocess_year["book_start_month"] = operations_sheet_data_preprocess_year["Writing Start Date"].dt.strftime('%B')
 
-    
+    # Calculate Median Duration and Total Books per Month
+    average_duration_by_month = operations_sheet_data_preprocess_year.groupby("book_start_month").agg(
+        duration_days_median=("duration_days", "median"),
+        total_books=("duration_days", "count")
+    ).reset_index()
+
+    # Round the median duration days
+    average_duration_by_month["duration_days_median"] = average_duration_by_month["duration_days_median"].apply(lambda x: round(x))
+
+    # Streamlit Title
+    st.subheader("📈 Average of Books Written Each Month in 2024")
+
+    # Create the line chart for median duration
+    line_chart = alt.Chart(average_duration_by_month).mark_line(point=True, color="orange").encode(
+        x=alt.X("book_start_month:N", title="Month", sort=month_order),
+        y=alt.Y("duration_days_median:Q", title="Median Duration (Days)"),
+        tooltip=["book_start_month", "duration_days_median"]
+    )
+
+    # Add text annotations on the line chart points
+    line_text = line_chart.mark_text(
+        align="center",
+        baseline="middle",
+        dy=-15,  # Position above the point
+        color="black"
+    ).encode(
+        text="duration_days_median:Q"
+    )
+
+    combined_chart = alt.layer(
+     
+        line_chart + line_text  
+    ).resolve_scale(
+        y="independent" 
+    ).properties(
+        width=700,  
+        height=400  
+    )
+
+    st.altair_chart(combined_chart, use_container_width=True)
+
+else:
+    st.write("Please Select 2024 year to see the Median Duration and Total Books by Month")
