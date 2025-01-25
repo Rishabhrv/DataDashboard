@@ -607,8 +607,8 @@ def find_stuck_stage(row):
 # Apply the function to create a 'Stuck Stage' column
 fortifiveday_status_by_month['Reason For Hold'] = fortifiveday_status_by_month.apply(find_stuck_stage, axis=1)
 
-fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Month','Since Enrolled','No of Author',
-                                           'Reason For Hold','Publishing Consultant 1','Writing End Date','Proofreading End Date',
+fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Month','Since Enrolled',
+                                           'Reason For Hold','No of Author','Publishing Consultant 1','Writing End Date','Proofreading End Date',
                                            'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
@@ -629,12 +629,15 @@ def reason_to_color(reason, color_map):
 
 # Get unique reasons
 unique_reasons = fortifiveday_status_by_month['Reason For Hold'].unique()
+unique_publishing_consultants = fortifiveday_status_by_month['Publishing Consultant 1'].unique()
 
 # Generate a color palette using Streamlit's theme
-color_palette = sns.color_palette("Set2", len(unique_reasons)).as_hex()
+color_palette_reason = sns.color_palette("Set2", len(unique_reasons)).as_hex()
+color_palette_consultant = sns.color_palette("Set3", len(unique_publishing_consultants)).as_hex()
 
 # Create a mapping from reason to color
-color_map = {reason: f'background-color: {color}' for reason, color in zip(unique_reasons, color_palette)}
+color_map_reason = {reason: f'background-color: {color}' for reason, color in zip(unique_reasons, color_palette_reason)}
+color_map_consultant = {reason: f'background-color: {color}' for reason, color in zip(unique_publishing_consultants, color_palette_consultant)}
 
 # Apply color to 'Since Enrolled' column
 styled_df = fortifiveday_status_by_month.style.applymap(
@@ -643,8 +646,13 @@ styled_df = fortifiveday_status_by_month.style.applymap(
 )
 
 styled_df = styled_df.applymap(
-    lambda x: reason_to_color(x, color_map),
+    lambda x: reason_to_color(x, color_map_reason),
     subset=['Reason For Hold']
+)
+
+styled_df = styled_df.applymap(
+    lambda x: reason_to_color(x, color_map_consultant),
+    subset=['Publishing Consultant 1']
 )
 
 # Create a pie chart with Plotly

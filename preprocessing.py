@@ -58,6 +58,7 @@ def operations_preprocess(data):
     
     # Drop rows where all elements are NaN
     data = data.dropna(how='all')
+    #data.columns = data.columns.str.strip()
 
     # Convert 'Date' columns to datetime
     date_columns = [
@@ -71,7 +72,7 @@ def operations_preprocess(data):
             # Convert to datetime64[ns] first
             data[col] = pd.to_datetime(data[col], format="%d/%m/%Y", errors='coerce')
 
-    if 'Date' in data.columns:
+    if 'Date' in data.columns and not data['Date'].isna().all():
         # Filter data by the specified year
         data = data[data['Date'].dt.year >= 2024]
 
