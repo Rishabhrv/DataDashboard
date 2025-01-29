@@ -713,7 +713,11 @@ with col2:
 #####################----------- Recently added books----------######################
 #####################################################################################################################
 
-recent_books_data = operations_sheet_data_preprocess[['Book ID', 'Book Title', 'Date', 'No of Author']]
+recent_books_data_columns = ['Book ID', 'Book Title', 'Date', 'No of Author','Publishing Consultant 1',
+                                                      'Publishing Consultant 2','Publishing Consultant 3','Publishing Consultant 4',
+                                                      'Author Name 1','Author Name 2','Author Name 3','Author Name 4']
+
+recent_books_data = operations_sheet_data_preprocess[recent_books_data_columns]
 
 # Adding "This Month" option
 option = st.radio(
@@ -725,7 +729,7 @@ option = st.radio(
 
 # Filter data based on the selected option
 if option == "Today":
-    filtered_df = num_book_today[['Book ID', 'Book Title', 'Date', 'No of Author']]
+    filtered_df = num_book_today[recent_books_data_columns]
     heading = f"New Book Enrolled {today}"
 elif option == "Yesterday":
     yesterday = today - timedelta(days=1)
@@ -736,7 +740,7 @@ elif option == "Last 10 Days":
     filtered_df = recent_books_data[recent_books_data['Date'] >= pd.Timestamp(last_10_days)]
     heading = f"Books Enrolled in the Last 10 Days (Since {last_10_days})"
 else:  # This Month
-    filtered_df = operations_sheet_data_preprocess_month[['Book ID', 'Book Title', 'Date', 'No of Author']]
+    filtered_df = operations_sheet_data_preprocess_month[recent_books_data_columns]
     heading = f"Books Enrolled in {selected_month} {selected_year}"
 
 # Display heading with count
