@@ -112,7 +112,7 @@ def check_number_or_string(value):
     return isinstance(value, (int, float, str))
 
 #####################################################################################################
-#####################-----------  Current day status dataframe ----------######################
+#####################-----------  Work done Books on Previous day & Today ----------######################
 ####################################################################################################
 
 
@@ -121,9 +121,10 @@ def work_done_status(df):
     from datetime import datetime, timedelta
 
     # Ensure date columns are datetime objects
-    date_columns = ['Writing End Date', 'Proofreading End Date', 'Formating End Date']
+    date_columns = ['Date','Writing Start Date','Writing End Date', 'Proofreading Start Date',
+                    'Proofreading End Date', 'Formating Start Date','Formating End Date']
     for col in date_columns:
-        df[col] = pd.to_datetime(df[col], errors='coerce')  # Convert to datetime, set invalid to NaT
+        df[col] = pd.to_datetime(df[col], errors='coerce')
 
     # Get today's and yesterday's dates
     today = datetime.now().date()

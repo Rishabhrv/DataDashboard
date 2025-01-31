@@ -47,24 +47,25 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
 
 def validate_token():
-    # Extract the token from query parameters
-    params = st.query_params  # st.query_params for earlier versions
-    if 'token' not in params:
-        st.error("Access Denied: Login Required")
-        st.stop()
+    # Store token in session_state if it is found in URL parameters
+    if 'token' not in st.session_state:
+        params = st.query_params
+        if 'token' in params:
+            st.session_state.token = params['token']
+        else:
+            st.error("Access Denied: Login Required")
+            st.stop()
 
-    token = params['token']
+    token = st.session_state.token
+
     try:
-        # Split the JWT into header, payload, and signature
         parts = token.split('.')
         if len(parts) != 3:
             raise ValueError("Invalid token format")
 
-        # Decode header and payload
         header = json.loads(base64.urlsafe_b64decode(parts[0] + '==').decode('utf-8'))
         payload = json.loads(base64.urlsafe_b64decode(parts[1] + '==').decode('utf-8'))
 
-        # Verify signature
         signature = base64.urlsafe_b64decode(parts[2] + '==')
         expected_signature = hmac.new(
             SECRET_KEY.encode(),
@@ -75,15 +76,17 @@ def validate_token():
         if not hmac.compare_digest(signature, expected_signature):
             raise ValueError("Invalid token signature")
 
-        # Check expiration (if present)
         if 'exp' in payload and payload['exp'] < time.time():
             raise ValueError("Token has expired")
+
+        # Store validated user info in session_state
+        st.session_state.user = payload['user']
+        st.session_state.role = payload['role']
 
     except ValueError as e:
         st.error(f"Access Denied: {e}")
         st.stop()
 
-# Validate token before running the app
 validate_token()
 
 # Initialize session state for new visitors
@@ -260,7 +263,6 @@ with st.container():
     col8.metric("Printed", books_printed_true, delta=f"-{total_books - books_printed_true} not printed")
     col9.metric("Delivered", books_delivered_true, delta=f"-{total_books - books_delivered_true} not delivered")
 
-
 ######################################################################################
 ####################----------- Current Working status dataframe -------------########
 ######################################################################################
@@ -356,7 +358,7 @@ for status in status_messages:
 
 
 ######################################################################################
-###############----------- Current day status dataframe -------------################
+###############----------- Work done Books on Previous day & Today -------------################
 ######################################################################################
 
 work_done_status = work_done_status(operations_sheet_data_preprocess)

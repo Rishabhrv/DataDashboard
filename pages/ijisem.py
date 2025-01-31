@@ -26,24 +26,25 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
 
 def validate_token():
-    # Extract the token from query parameters
-    params = st.query_params  
-    if 'token' not in params:
-        st.error("Access Denied: Login Required")
-        st.stop()
+    # Store token in session_state if it is found in URL parameters
+    if 'token' not in st.session_state:
+        params = st.query_params
+        if 'token' in params:
+            st.session_state.token = params['token']
+        else:
+            st.error("Access Denied: Login Required")
+            st.stop()
 
-    token = params['token']
+    token = st.session_state.token
+
     try:
-        # Split the JWT into header, payload, and signature
         parts = token.split('.')
         if len(parts) != 3:
             raise ValueError("Invalid token format")
 
-        # Decode header and payload
         header = json.loads(base64.urlsafe_b64decode(parts[0] + '==').decode('utf-8'))
         payload = json.loads(base64.urlsafe_b64decode(parts[1] + '==').decode('utf-8'))
 
-        # Verify signature
         signature = base64.urlsafe_b64decode(parts[2] + '==')
         expected_signature = hmac.new(
             SECRET_KEY.encode(),
@@ -54,16 +55,18 @@ def validate_token():
         if not hmac.compare_digest(signature, expected_signature):
             raise ValueError("Invalid token signature")
 
-        # Check if token has expired
         if 'exp' in payload and payload['exp'] < time.time():
             raise ValueError("Token has expired")
+
+        # Store validated user info in session_state
+        st.session_state.user = payload['user']
+        st.session_state.role = payload['role']
 
     except ValueError as e:
         st.error(f"Access Denied: {e}")
         st.stop()
 
-# Validate token before running the app
-#validate_token()
+validate_token()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -90,6 +93,7 @@ month_order = [
 
 
 unique_year = ijisem_sheet_data_preprocess['Year'].unique()[~np.isnan(ijisem_sheet_data_preprocess['Year'].unique())]
+unique_year = unique_year.astype(int)
 
 col1, col2 = st.columns([2, 8])  # Adjust column widths as needed
 
@@ -136,6 +140,16 @@ with st.container():
     col5.metric("Formatting", formating, delta=f"-{total_papers_month - formating} not complete")
     col6.metric("Pyment Received", payment_status, delta=f"-{total_papers_month - payment_status} not received")
 
+
+with st.expander("View papers", expanded=False,icon='🔍'):
+    tab1, tab2 = st.tabs([f"{total_papers_month} Papers in {selected_month}", f"{paper_upload} Papers Published in {selected_month}"])
+    
+    with tab1:
+        st.dataframe(ijisem_sheet_data_preprocess_filter, use_container_width=True, hide_index=True)
+    
+    with tab2:
+        st.dataframe(ijisem_sheet_data_preprocess_filter[ijisem_sheet_data_preprocess_filter['Paper Upload'] == 'TRUE'], use_container_width=True, hide_index=True)
+
 ####################################################################################################
 #####################-----------  Search Papers ----------######################
 ###################################################################################################
@@ -172,7 +186,6 @@ if query_1 is not None and query_2 is not None:
         st.warning("No results found. Please try different inputs.")
 else:
     st.info("Please fill in both fields to search.")
-
 
 ####################################################################################################
 #####################-----------  Line Chart Monthly Books & Authors ----------#####################
