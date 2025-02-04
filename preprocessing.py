@@ -150,8 +150,11 @@ def work_done_status(df):
 
     filtered_df['Work Done'] = filtered_df.apply(identify_work_done, axis=1)
 
+    for col in date_columns:
+        filtered_df[col] = filtered_df[col].dt.strftime('%d %B %Y')
+
     # Select and reorder columns
-    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date', 'Month', 'Since Enrolled', 'No of Author','Work Done',
+    filtered_df = filtered_df[['Book ID', 'Book Title', 'Date','Since Enrolled', 'No of Author','Work Done',
                                'Writing Complete', 'Writing By', 'Writing Start Date', 'Writing Start Time',
                                'Writing End Date', 'Writing End Time', 'Proofreading Complete', 'Proofreading By',
                                'Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date',
@@ -159,6 +162,7 @@ def work_done_status(df):
                                'Formating Start Time', 'Formating End Date', 'Formating End Time']].fillna('Pending')
 
     return filtered_df
+
 
 
 ####################################################################################################
@@ -171,12 +175,16 @@ def proofreading_complete(data,selected_year,selected_month):
     (data['Proofreading End Date'].dt.strftime('%B') == str(selected_month))
 ]
     proofreading_complete = proofreading_complete[proofreading_complete['Proofreading Complete'] == 'TRUE']
-    proofreading_complete = proofreading_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
+    proofreading_complete = proofreading_complete[['Book ID', 'Book Title','No of Author', 'Date','Since Enrolled',
                                                    'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time',
                                                    'Proofreading By', 'Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date',
                                                    'Proofreading End Time']]
     
     count = proofreading_complete['Book ID'].nunique()
+
+    date_columns = [col for col in proofreading_complete.columns if 'Date' in col]
+    for col in date_columns:
+        proofreading_complete[col] = proofreading_complete[col].dt.strftime('%d %B %Y')
 
     return proofreading_complete, count
 
@@ -186,10 +194,14 @@ def writing_complete(data,selected_year,selected_month):
     (data['Writing End Date'].dt.strftime('%B') == str(selected_month))
 ]
     writing_complete = writing_complete[writing_complete['Writing Complete'] == 'TRUE']
-    writing_complete = writing_complete[['Book ID', 'Book Title','No of Author', 'Date', 'Month','Since Enrolled',
+    writing_complete = writing_complete[['Book ID', 'Book Title','No of Author', 'Date','Since Enrolled',
                                                    'Writing By', 'Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']]
     
     count = writing_complete['Book ID'].nunique()
+
+    date_columns = [col for col in writing_complete.columns if 'Date' in col]
+    for col in date_columns:
+        writing_complete[col] = writing_complete[col].dt.strftime('%d %B %Y')
     
     return writing_complete, count
 

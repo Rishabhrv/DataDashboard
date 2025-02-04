@@ -131,12 +131,17 @@ except Exception as e:
 
 sheets = read_sheets_from_json()
 
+
+######################################################################################
+###########################----------- Data Loader & Spinner ----------#############################
+######################################################################################
+
 # # Create a placeholder for the status
 status_placeholder = st.empty()
 
 with status_placeholder.container():
-    with st.status("Loading Data", expanded=True) as status:
-        st.write("Calling Google Sheet API...")
+    with st.status("Fetching Data", expanded=True) as status:
+        st.write("Downloading AGPH Data...")
         operations_sheet_data = sheet_to_df(sheets['Operations'])
         st.write("Processing Data..")
         operations_sheet_data_preprocess = operations_preprocess(operations_sheet_data)
@@ -144,10 +149,6 @@ with status_placeholder.container():
             label="Data Loaded!", state="complete", expanded=False)
 
 status_placeholder.empty()
-
-######################################################################################
-###########################----------- Data Loader & Spinner ----------#############################
-######################################################################################
 
 
 unique_year = operations_sheet_data_preprocess['Year'].unique()[~np.isnan(operations_sheet_data_preprocess['Year'].unique())]
@@ -169,6 +170,7 @@ num_book_today = operations_sheet_data_preprocess[operations_sheet_data_preproce
 if st.session_state.first_visit:
     if len(num_book_today) > 0:
         st.toast(f"{len(num_book_today)} New Book{'s' if len(num_book_today) > 1 else ''} Enrolled Today!", icon="🎉")
+        time.sleep(2)
         st.balloons()  # Trigger the balloons animation
     else:
         st.toast("No New Books Enrolled Today!", icon="😔")
@@ -263,46 +265,147 @@ with st.container():
     col8.metric("Printed", books_printed_true, delta=f"-{total_books - books_printed_true} not printed")
     col9.metric("Delivered", books_delivered_true, delta=f"-{total_books - books_delivered_true} not delivered")
 
+
+######################################################################################
+####################----------- Remaining Work Expander -------------################
+######################################################################################
+
+books_written_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Writing Complete'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
+
+books_proofread_remaining = operations_sheet_data_preprocess_month[(operations_sheet_data_preprocess_month['Writing Complete'] == 'TRUE') & 
+                                                                   (operations_sheet_data_preprocess_month['Proofreading Complete'] != 'TRUE')][['Book ID', 'Book Title', 'Date',
+                                                                                                                                                 'No of Author','Writing By','Writing Start Date',
+                                                                                                                                                 'Writing End Date']]
+
+books_formatted_remaining = operations_sheet_data_preprocess_month[(operations_sheet_data_preprocess_month['Proofreading Complete'] == 'TRUE') &
+                                                                    (operations_sheet_data_preprocess_month['Formating Complete'] != 'TRUE')][['Book ID', 'Book Title', 'Date','No of Author',
+                                                                                                                                               'Proofreading By','Proofreading Start Date',
+                                                                                                                                               'Proofreading End Date']]
+
+
+books_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Book Complete'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
+books_apply_isbn_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
+books_printed_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author',]]
+books_delivered_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
+
+
+for df in [books_written_remaining,
+    books_proofread_remaining,
+    books_formatted_remaining,
+    books_remaining,
+    books_apply_isbn_remaining,
+    books_printed_remaining,
+    books_delivered_remaining]:
+    # Identify date columns
+    date_columns = [col for col in df.columns if 'Date' in col]
+    
+    # Format each date column
+    for col in date_columns:
+        df[col] = pd.to_datetime(df[col], errors='coerce')
+        df[col] = df[col].dt.strftime('%d %B %Y')
+
+
+with st.expander("View Remaining Work", expanded=False,icon='⌛'):
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([f"{total_books - books_written_true} Writing Remaining", 
+                                                        f"{books_written_true - books_proofread_true} Proofreading Remaining", 
+                                                        f"{books_proofread_true - books_formatted_true} Formatting Remaining",
+                                                         f"{total_books - books_complete} Book Not Complete",
+                                                         f"{total_books - books_apply_isbn_true} ISBN Remaining",
+                                                         f"{total_books - books_printed_true} Print Remaining",
+                                                         f"{total_books - books_delivered_true} Delivered Remaining"])
+    
+    with tab1:
+        st.dataframe(books_written_remaining, use_container_width=True, hide_index=True)
+    
+    with tab2:
+        st.dataframe(books_proofread_remaining, use_container_width=True, hide_index=True)
+
+    with tab3:
+        st.dataframe(books_formatted_remaining, use_container_width=True, hide_index=True)
+    
+    with tab4:
+        st.dataframe(books_remaining, use_container_width=True, hide_index=True)
+
+    with tab5:
+        st.dataframe(books_apply_isbn_remaining, use_container_width=True, hide_index=True)
+    
+    with tab6:
+        st.dataframe(books_printed_remaining, use_container_width=True, hide_index=True)
+
+    with tab7:
+        st.dataframe(books_delivered_remaining, use_container_width=True, hide_index=True)
+
+
+######################################################################################
+####################----------- Work Summary -------------############################
+######################################################################################
+
+    
+# summary_placeholder = st.empty()
+
+# if "summary_data" not in st.session_state:
+#     st.session_state["summary_data"] = {}
+
+# stream_data = "Some text here It handles the streaming in a non-blocking way, so the rest of your app remains responsive.It handles the streaming in a non-blocking way, so the rest of your app remains responsive."
+
+# def typewriter_effect(text):
+#     placeholder = st.empty()  # Placeholder for updating text
+#     result = ""
+
+#     for char in text:
+#         result += char
+#         placeholder.write(result)  # Update the text dynamically
+#         time.sleep(0.005)  # Small delay to simulate typewriter effect
+
+# st.write("### Typewriter Effect:")
+# typewriter_effect(stream_data) 
+
+
+
 ######################################################################################
 ####################----------- Current Working status dataframe -------------########
 ######################################################################################
 
+writing_by = operations_sheet_data_preprocess['Writing By'].unique()[pd.notna(operations_sheet_data_preprocess['Writing By'].unique())]
+proofreading_by = operations_sheet_data_preprocess['Proofreading By'].unique()[pd.notna(operations_sheet_data_preprocess['Proofreading By'].unique())]
+formatting_by = operations_sheet_data_preprocess['Formating By'].unique()[pd.notna(operations_sheet_data_preprocess['Formating By'].unique())]
+
+
 # Define conditions in a dictionary, including columns to select for each case
 conditions = {
     'Formating': {
-        'by': ['Akash', 'Anush', 'Surendra', 'Rahul'],
+        'by': formatting_by,
         'status': 'Formating Complete',
-        'columns': ['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author', 'Formating By', 'Formating Start Date', 'Formating Start Time',
+        'columns': ['Book ID', 'Book Title', 'Date','Since Enrolled','No of Author', 'Formating By', 'Formating Start Date', 'Formating Start Time',
       'Proofreading By','Proofreading Start Date', 'Proofreading Start Time', 'Proofreading End Date', 'Proofreading End Time',
       'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date', 'Writing End Time']
     },
     'Proofreading': {
-        'by': ['Umer', 'Publish Only', 'Barnali', 'Sheetal', 'Rakesh', 'Aman', 'Minakshi', 'Vaibhavi'],
+        'by': proofreading_by,
         'status': 'Proofreading Complete',
-        'columns': ['Book ID', 'Book Title','Date', 'Month','Since Enrolled','No of Author', 'Proofreading By','Proofreading Start Date', 
+        'columns': ['Book ID', 'Book Title','Date','Since Enrolled','No of Author', 'Proofreading By','Proofreading Start Date', 
                     'Proofreading Start Time', 'Writing By','Writing Start Date', 'Writing Start Time', 'Writing End Date',
        'Writing End Time']
     },
     'Writing': {
-        'by': ['Vaibhavi', 'Vaibhav', 'Rakesh', 'Sheetal', 'Urvashi', 'Shravani', 
-               'Publish Only', 'Minakshi', 'Preeti', 'Muskan', 'Bhavana', 'Aman', 
-               'Sachin', 'muskan'],
+        'by': writing_by,
         'status': 'Writing Complete',
-        'columns': ['Book ID', 'Book Title','Date', 'Month', 'Since Enrolled','No of Author','Writing By','Writing Start Date', 'Writing Start Time']
+        'columns': ['Book ID', 'Book Title','Date','Since Enrolled','No of Author','Writing By','Writing Start Date', 'Writing Start Time']
     }
 }
-
 
 # Extract information based on conditions, including specified columns
 results = {}
 for key, cond in conditions.items():
     # Filter the data and select columns, creating a copy to avoid modifying the original DataFrame
-    current_data = operations_sheet_data_preprocess[(operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & (operations_sheet_data_preprocess[cond['status']] == 'FALSE')][cond['columns']].copy()
+    current_data = operations_sheet_data_preprocess[(operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & 
+                                                    (operations_sheet_data_preprocess[cond['status']] == 'FALSE')
+                                                    ][cond['columns']].copy()
     
     # Format 'Date' columns in the copy to remove the time part
     date_columns = [col for col in current_data.columns if 'Date' in col]
     for date_col in date_columns:
-        current_data[date_col] = pd.to_datetime(current_data[date_col]).dt.strftime('%Y-%m-%d')
+        current_data[date_col] = pd.to_datetime(current_data[date_col]).dt.strftime('%d %B %Y')
     
     # Save the cleaned DataFrame in results
     results[key] = current_data
@@ -356,7 +459,6 @@ for status in status_messages:
     )
     st.dataframe(status['data'], use_container_width=True, hide_index=True)
 
-
 ######################################################################################
 ###############----------- Work done Books on Previous day & Today -------------################
 ######################################################################################
@@ -392,18 +494,26 @@ st.dataframe(work_done_status, use_container_width=False, hide_index=True, colum
 def writing_remaining(data):
 
     data['Writing By'] = data['Writing By'].fillna('Pending')
-    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author','Writing By']]
+    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Since Enrolled','No of Author','Writing By']]
     writing_remaining = data['Book ID'].nunique() - len(results['Writing'])
+
+    date_columns = [col for col in data.columns if 'Date' in col]
+    for col in date_columns:
+        data[col] = data[col].dt.strftime('%d %B %Y')
 
     return data,writing_remaining
 
 def proofread_remaining(data):
 
     data['Proofreading By'] = data['Proofreading By'].fillna('Pending')
-    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Month','Since Enrolled','No of Author','Writing By',
+    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Since Enrolled','No of Author','Writing By',
                                                                                                     'Writing Start Date', 'Writing Start Time', 'Writing End Date',
                                                                                                     'Writing End Time','Proofreading By']]
     proof_remaining = data['Book ID'].nunique() - len(results['Proofreading'])
+
+    date_columns = [col for col in data.columns if 'Date' in col]
+    for col in date_columns:
+        data[col] = data[col].dt.strftime('%d %B %Y')
 
     return data,proof_remaining
 
@@ -609,11 +719,16 @@ def find_stuck_stage(row):
 # Apply the function to create a 'Stuck Stage' column
 fortifiveday_status_by_month['Reason For Hold'] = fortifiveday_status_by_month.apply(find_stuck_stage, axis=1)
 
-fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Month','Since Enrolled',
-                                           'Reason For Hold','No of Author','Publishing Consultant 1','Writing End Date','Proofreading End Date',
+fortifiveday_status_by_month = fortifiveday_status_by_month[['Book ID', 'Book Title','Date','Since Enrolled',
+                                           'Reason For Hold','No of Author','Publishing Consultant 1','Writing End Date',
+                                           'Proofreading End Date',
                                            'Formating End Date','Send Cover Page and Agreement', 'Agreement Received',
                                              'Digital Prof','Confirmation', 'Ready to Print','Print']].fillna("Pending")
 
+date_columns = [col for col in fortifiveday_status_by_month.columns if 'Date' in col]
+for col in date_columns:
+    fortifiveday_status_by_month[col] = pd.to_datetime(fortifiveday_status_by_month[col], errors='coerce')
+    fortifiveday_status_by_month[col] = fortifiveday_status_by_month[col].dt.strftime('%d %B %Y')
 
 # Prepare the reason counts data
 reason_counts = fortifiveday_status_by_month['Reason For Hold'].value_counts().reset_index()
@@ -638,8 +753,10 @@ color_palette_reason = sns.color_palette("Set2", len(unique_reasons)).as_hex()
 color_palette_consultant = sns.color_palette("Set3", len(unique_publishing_consultants)).as_hex()
 
 # Create a mapping from reason to color
-color_map_reason = {reason: f'background-color: {color}' for reason, color in zip(unique_reasons, color_palette_reason)}
-color_map_consultant = {reason: f'background-color: {color}' for reason, color in zip(unique_publishing_consultants, color_palette_consultant)}
+color_map_reason = {reason: f'background-color: {color}' for reason, 
+color in zip(unique_reasons, color_palette_reason)}
+color_map_consultant = {reason: f'background-color: {color}' for reason, 
+color in zip(unique_publishing_consultants, color_palette_consultant)}
 
 # Apply color to 'Since Enrolled' column
 styled_df = fortifiveday_status_by_month.style.applymap(
@@ -749,6 +866,11 @@ else:  # This Month
 book_count = len(filtered_df)
 books_per_day = filtered_df.groupby('Date').size().reset_index(name='Books Enrolled')
 
+date_columns = [col for col in filtered_df.columns if 'Date' in col]
+for col in date_columns:
+    filtered_df[col] = pd.to_datetime(filtered_df[col], errors='coerce')
+    filtered_df[col] = filtered_df[col].dt.strftime('%d %B %Y')
+
 
 # Create an Altair line chart
 line_chart_number_book = alt.Chart(books_per_day).mark_line().encode(
@@ -833,6 +955,84 @@ text_authors = line_chart_authors.mark_text(
     text='Total Authors:Q'
 )
 st.altair_chart((line_chart + text_books + line_chart_authors + text_authors), use_container_width=True)
+
+#####################################################################################################
+#####################-----------  Author Position Count ----------######################
+####################################################################################################
+
+
+author_position_counts_monthly = operations_sheet_data_preprocess_month['No of Author'].value_counts().reset_index()
+author_position_counts_monthly['No of Author'] = author_position_counts_monthly['No of Author'].apply(
+    lambda x: 'Position 1st' if x == 1 else (
+        'Position 2nd' if x == 2 else (
+            'Position 3rd' if x == 3 else 'Position 4th'
+        )
+    )
+)
+author_position_counts_monthly.columns = ['No of Author', 'Count']
+
+author_position_counts_yearly = operations_sheet_data_preprocess_year['No of Author'].value_counts().reset_index()
+author_position_counts_yearly['No of Author'] = author_position_counts_yearly['No of Author'].apply(
+    lambda x: 'Position 1st' if x == 1 else (
+        'Position 2nd' if x == 2 else (
+            'Position 3rd' if x == 3 else 'Position 4th'
+        )
+    )
+)
+author_position_counts_yearly.columns = ['No of Author', 'Count']
+
+# Create a vertical bar chart using Altair
+bar_chart_monthly = alt.Chart(author_position_counts_monthly).mark_bar().encode(
+    x=alt.X('No of Author:O', axis=alt.Axis(labelAngle=0)),
+    y='Count:Q',
+    color=alt.Color('No of Author:O', scale=alt.Scale(scheme='lighttealblue'), legend=None),
+).properties(
+    title=f'Number of Books by Author Position in {selected_month} (Monthly)',
+    width=300,
+    height=400
+)
+
+# Add text labels to "Total Books" bar chart
+author_count_text_monthly = bar_chart_monthly.mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-5
+).encode(
+    text='Count:Q'
+)
+
+
+# Create a vertical bar chart using Altair
+bar_chart_yearly = alt.Chart(author_position_counts_yearly).mark_bar().encode(
+    x=alt.X('No of Author:O', axis=alt.Axis(labelAngle=0)),
+    y='Count:Q',
+    color=alt.Color('No of Author:O', scale=alt.Scale(scheme='yelloworangebrown'), legend=None),
+).properties(
+    title=f'Number of Books by Author Position in {selected_year} (Yearly)',
+    width=300,
+    height=400
+)
+
+# Add text labels to "Total Books" bar chart
+author_count_text_yearly = bar_chart_yearly.mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-5
+).encode(
+    text='Count:Q'
+)
+
+# Display the chart in Streamlit
+st.subheader("👨‍🏫Distribution of Book by Authorship Positions")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.altair_chart(bar_chart_monthly + author_count_text_monthly, use_container_width=True)
+
+with col2:
+    st.altair_chart(bar_chart_yearly + author_count_text_yearly, use_container_width=True)
+
 
 #####################################################################################################
 #####################-----------  Bar chart Number of Books in Month ----------######################
@@ -1005,7 +1205,7 @@ formatting_num.columns = ['Formatter', 'Book Count']
 
 # Create the bar chart for Proofreading
 proofreading_bar = alt.Chart(proofreading_num).mark_bar().encode(
-    x=alt.X('Proofreader', sort='-y', title='Proofreader'),
+    x=alt.X('Proofreader', sort='-y', title='Proofreader',axis=alt.Axis(labelAngle=0)),
     y=alt.Y('Book Count', title='Book Count'),
     color=alt.Color('Proofreader', legend=None),
     tooltip=['Proofreader', 'Book Count']
@@ -1026,7 +1226,7 @@ proofreading_chart = proofreading_bar + proofreading_text
 
 # Create the bar chart for Formatting
 formatting_bar = alt.Chart(formatting_num).mark_bar().encode(
-    x=alt.X('Formatter', sort='-y', title='Formatter'),
+    x=alt.X('Formatter', sort='-y', title='Formatter', axis=alt.Axis(labelAngle=0)),
     y=alt.Y('Book Count', title='Book Count'),
     color=alt.Color('Formatter', legend=None),
     tooltip=['Formatter', 'Book Count']
@@ -1053,6 +1253,7 @@ with col1:
 
 with col2:
     st.altair_chart(formatting_chart, use_container_width=True)
+
 
 ######################################################################################################################
 #####################-----------  Bar chart Number of Monthly Books & Authors in 2024 ----------######################
@@ -1141,7 +1342,7 @@ fig_authors_added_montly = px.pie(
     authors_added_montly,
     names="Publishing Consultant",
     values="Authors Added",
-    title=f"Authors Enrolled in {selected_month} {selected_year}",
+    title=f"Authors Enrolled in {selected_month} {selected_year} (Monthly)",
     hole = 0.45,
     color_discrete_sequence=['#4C78A8', '#F3C623']  # Custom color scheme
 )
@@ -1152,7 +1353,7 @@ fig_authors_added_yearly = px.pie(
     authors_added_yearly,
     names="Publishing Consultant",
     values="Authors Added",
-    title=f"Authors Enrolled in {selected_year}",
+    title=f"Authors Enrolled in {selected_year} (Yearly)",
     hole = 0.45,
     color_discrete_sequence=['#4C78A8', '#F3C623'] # Custom color scheme
 )
@@ -1169,55 +1370,43 @@ with col2:
     st.plotly_chart(fig_authors_added_yearly, use_container_width=True)
 
 
+# # Store summary in session state
+# st.session_state["summary_data"] = {
+#     "books_added": today_num_books,
+#     "authors_added": today_num_authors,
+#     "books_written_today": work_done_status['Book ID'].nunique(),
+#     "writing_remaining": writing_remaining_count,
+#     "proofreading_remaining": proofread_remaining_count,
+#     "books_on_hold": fortifiveday_status['Book ID'].nunique()
+# }
 
-if selected_year == 2024:
-    operations_sheet_data_preprocess_year["duration_days"] = (
-    operations_sheet_data_preprocess_year["Formating End Date"] - operations_sheet_data_preprocess_year["Writing Start Date"]
-    ).dt.days
+# # Function to create a more natural summary
+# def get_natural_text(value, item_name):
+#     if value == 0:
+#         return f"No {item_name} have been added today."
+#     elif value == 1:
+#         return f"{value} {item_name} has been added today."
+#     else:
+#         return f"{value} {item_name}s have been added today."
 
-    # Extract the month name from the Writing Start Date
-    operations_sheet_data_preprocess_year["book_start_month"] = operations_sheet_data_preprocess_year["Writing Start Date"].dt.strftime('%B')
+# # Define a generator function for streaming output
+# def summary_generator():
+#     sentences = [
+#         "📚 Work Summary:",
+#         get_natural_text(st.session_state['summary_data']['books_added'], "book"),
+#         get_natural_text(st.session_state['summary_data']['authors_added'], "author"),
+#         f"- **Books Written Today:** {st.session_state['summary_data']['books_written_today']}",
+#         f"- **Remaining Books in Writing:** {st.session_state['summary_data']['writing_remaining']}",
+#         f"- **Remaining Books in Proofreading:** {st.session_state['summary_data']['proofreading_remaining']}",
+#         f"- **Books Still on Hold:** {st.session_state['summary_data']['books_on_hold']}",
+#     ]
 
-    # Calculate Median Duration and Total Books per Month
-    average_duration_by_month = operations_sheet_data_preprocess_year.groupby("book_start_month").agg(
-        duration_days_median=("duration_days", "median"),
-        total_books=("duration_days", "count")
-    ).reset_index()
+#     for sentence in sentences:
+#         yield sentence  # Yield full sentence instead of word-by-word
+#         time.sleep(0.2)  # Adjust delay as needed
 
-    # Round the median duration days
-    average_duration_by_month["duration_days_median"] = average_duration_by_month["duration_days_median"].apply(lambda x: round(x))
+# # Display the streamed summary at the top
+# summary_placeholder.write_stream(summary_generator())
 
-    # Streamlit Title
-    st.subheader("📈 Average of Books Written Each Month in 2024")
 
-    # Create the line chart for median duration
-    line_chart = alt.Chart(average_duration_by_month).mark_line(point=True, color="orange").encode(
-        x=alt.X("book_start_month:N", title="Month", sort=month_order),
-        y=alt.Y("duration_days_median:Q", title="Median Duration (Days)"),
-        tooltip=["book_start_month", "duration_days_median"]
-    )
 
-    # Add text annotations on the line chart points
-    line_text = line_chart.mark_text(
-        align="center",
-        baseline="middle",
-        dy=-15,  # Position above the point
-        color="black"
-    ).encode(
-        text="duration_days_median:Q"
-    )
-
-    combined_chart = alt.layer(
-     
-        line_chart + line_text  
-    ).resolve_scale(
-        y="independent" 
-    ).properties(
-        width=700,  
-        height=400  
-    )
-
-    st.altair_chart(combined_chart, use_container_width=True)
-
-else:
-    st.write("Please Select 2024 year to see the Median Duration and Total Books by Month")
