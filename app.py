@@ -195,25 +195,7 @@ with col2:
         
 with col3:
         if adsearch_url:
-            adsearch_clicked = st.markdown(
-            f"""
-            <a href="{adsearch_url}" target="_blank" style="text-decoration: none;">
-                <button style="
-                    background-color: #ffffff;
-                    color: black;
-                    border:  0.2px solid;
-                    border-color: #b3abab;
-                    padding: 6px 10px;
-                    text-align: center;
-                    font-size: 13.5px;
-                    cursor: pointer;
-                    border-radius: 55px;">
-                    Search Books 🔍
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
+            st.page_link(adsearch_url, label="Seach Books", icon="🔎")
 
     
 ######################################################################################
@@ -306,10 +288,9 @@ for df in [books_written_remaining,
 
 
 with st.expander("View Remaining Work", expanded=False,icon='⌛'):
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([f"{total_books - books_written_true} Writing Remaining", 
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([f"{total_books - books_written_true} Writing Remaining", 
                                                         f"{books_written_true - books_proofread_true} Proofreading Remaining", 
                                                         f"{books_proofread_true - books_formatted_true} Formatting Remaining",
-                                                         f"{total_books - books_complete} Book Not Complete",
                                                          f"{total_books - books_apply_isbn_true} ISBN Remaining",
                                                          f"{total_books - books_printed_true} Print Remaining",
                                                          f"{total_books - books_delivered_true} Delivered Remaining"])
@@ -322,17 +303,14 @@ with st.expander("View Remaining Work", expanded=False,icon='⌛'):
 
     with tab3:
         st.dataframe(books_formatted_remaining, use_container_width=True, hide_index=True)
-    
-    with tab4:
-        st.dataframe(books_remaining, use_container_width=True, hide_index=True)
 
-    with tab5:
+    with tab4:
         st.dataframe(books_apply_isbn_remaining, use_container_width=True, hide_index=True)
     
-    with tab6:
+    with tab5:
         st.dataframe(books_printed_remaining, use_container_width=True, hide_index=True)
 
-    with tab7:
+    with tab6:
         st.dataframe(books_delivered_remaining, use_container_width=True, hide_index=True)
 
 
@@ -494,7 +472,8 @@ st.dataframe(work_done_status, use_container_width=False, hide_index=True, colum
 def writing_remaining(data):
 
     data['Writing By'] = data['Writing By'].fillna('Pending')
-    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 'Date','Since Enrolled','No of Author','Writing By']]
+    data = data[data['Writing Complete'].isin(['FALSE', pd.NA])][['Book ID', 'Book Title', 
+                                                                  'Date','Since Enrolled','No of Author','Writing By']]
     writing_remaining = data['Book ID'].nunique() - len(results['Writing'])
 
     date_columns = [col for col in data.columns if 'Date' in col]
@@ -506,8 +485,12 @@ def writing_remaining(data):
 def proofread_remaining(data):
 
     data['Proofreading By'] = data['Proofreading By'].fillna('Pending')
-    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 'Date','Since Enrolled','No of Author','Writing By',
-                                                                                                    'Writing Start Date', 'Writing Start Time', 'Writing End Date',
+    data = data[(data['Writing Complete'] == 'TRUE') & (data['Proofreading Complete'] == 'FALSE')][['Book ID', 'Book Title', 
+                                                                                                    'Date','Since Enrolled',
+                                                                                                    'No of Author','Writing By',
+                                                                                                    'Writing Start Date', 
+                                                                                                    'Writing Start Time', 
+                                                                                                    'Writing End Date',
                                                                                                     'Writing End Time','Proofreading By']]
     proof_remaining = data['Book ID'].nunique() - len(results['Proofreading'])
 
@@ -963,29 +946,29 @@ st.altair_chart((line_chart + text_books + line_chart_authors + text_authors), u
 
 author_position_counts_monthly = operations_sheet_data_preprocess_month['No of Author'].value_counts().reset_index()
 author_position_counts_monthly['No of Author'] = author_position_counts_monthly['No of Author'].apply(
-    lambda x: 'Position 1st' if x == 1 else (
-        'Position 2nd' if x == 2 else (
-            'Position 3rd' if x == 3 else 'Position 4th'
+    lambda x: 'Single Author' if x == 1 else (
+        '2 Author' if x == 2 else (
+            '3 Author' if x == 3 else '4 Author'
         )
     )
 )
-author_position_counts_monthly.columns = ['No of Author', 'Count']
+author_position_counts_monthly.columns = ['No of Books', 'Count']
 
 author_position_counts_yearly = operations_sheet_data_preprocess_year['No of Author'].value_counts().reset_index()
 author_position_counts_yearly['No of Author'] = author_position_counts_yearly['No of Author'].apply(
-    lambda x: 'Position 1st' if x == 1 else (
-        'Position 2nd' if x == 2 else (
-            'Position 3rd' if x == 3 else 'Position 4th'
+    lambda x: 'Single Author' if x == 1 else (
+        '2 Author' if x == 2 else (
+            '3 Author' if x == 3 else '4 Author'
         )
     )
 )
-author_position_counts_yearly.columns = ['No of Author', 'Count']
+author_position_counts_yearly.columns = ['No of Books', 'Count']
 
 # Create a vertical bar chart using Altair
 bar_chart_monthly = alt.Chart(author_position_counts_monthly).mark_bar().encode(
-    x=alt.X('No of Author:O', axis=alt.Axis(labelAngle=0)),
+    x=alt.X('No of Books:O', axis=alt.Axis(labelAngle=0), sort='-y'),
     y='Count:Q',
-    color=alt.Color('No of Author:O', scale=alt.Scale(scheme='lighttealblue'), legend=None),
+    color=alt.Color('No of Books:O', scale=alt.Scale(scheme='lighttealblue'), legend=None),
 ).properties(
     title=f'Number of Books by Author Position in {selected_month} (Monthly)',
     width=300,
@@ -1004,9 +987,9 @@ author_count_text_monthly = bar_chart_monthly.mark_text(
 
 # Create a vertical bar chart using Altair
 bar_chart_yearly = alt.Chart(author_position_counts_yearly).mark_bar().encode(
-    x=alt.X('No of Author:O', axis=alt.Axis(labelAngle=0)),
+    x=alt.X('No of Books:O', axis=alt.Axis(labelAngle=0), sort='-y'),
     y='Count:Q',
-    color=alt.Color('No of Author:O', scale=alt.Scale(scheme='yelloworangebrown'), legend=None),
+    color=alt.Color('No of Books:O', scale=alt.Scale(scheme='yelloworangebrown'), legend=None),
 ).properties(
     title=f'Number of Books by Author Position in {selected_year} (Yearly)',
     width=300,
@@ -1023,7 +1006,7 @@ author_count_text_yearly = bar_chart_yearly.mark_text(
 )
 
 # Display the chart in Streamlit
-st.subheader("👨‍🏫Distribution of Book by Authorship Positions")
+st.subheader("👨‍🏫Distribution of Books by Authorship")
 
 col1, col2 = st.columns(2)
 
@@ -1032,6 +1015,70 @@ with col1:
 
 with col2:
     st.altair_chart(bar_chart_yearly + author_count_text_yearly, use_container_width=True)
+
+
+#####################################################################################################
+#####################-----------  Top 10 Authors From 2024 ----------######################
+####################################################################################################
+
+authors_name  = operations_sheet_data_preprocess[['Author Name 1', 
+                                                  'Author Name 2', 
+                                                  'Author Name 3', 
+                                                  'Author Name 4']].values.flatten()
+
+unique_authors = pd.Series(authors_name).dropna().value_counts().reset_index()
+unique_authors.columns = ['Author Name', 'Book Count']
+
+top15_authors = unique_authors[~unique_authors['Author Name'].isin(['TRUE', 'FALSE', 'CP'])].sort_values('Book Count', ascending=False).head(10)
+
+x_axis = alt.Axis(labelAngle=45, labelOverlap=False)
+# Create a vertical bar chart using Altair
+unique_author_chart = alt.Chart(top15_authors).mark_bar().encode(
+    x=alt.X('Author Name:N', title="Author" , axis=x_axis, sort='-y'),
+    y=alt.Y('Book Count:Q', title="Number of Books"),
+    tooltip=['Author Name', 'Book Count'],
+    color=alt.Color('Author Name:O', scale=alt.Scale(scheme='lighttealblue'), legend=None),
+).properties(
+    width=1000,
+    height=500,
+    title="Number of Books Published by Authors"
+)
+
+# Add text labels to "Total Books" bar chart
+unique_author_chart_text = unique_author_chart.mark_text(
+    align='center',
+    baseline='bottom',
+    dy=-5
+).encode(
+    text='Book Count:Q'
+)
+
+
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("👨‍🏫Top 10 Authors of AGPH")
+    st.altair_chart(unique_author_chart + unique_author_chart_text, use_container_width=True)
+
+
+with col2:
+    selected_author = st.selectbox("Select Author", top15_authors['Author Name'].values)
+    mask = (operations_sheet_data_preprocess['Author Name 1'].str.contains(selected_author, case=False, na=False) |
+                        operations_sheet_data_preprocess['Author Name 2'].str.contains(selected_author, case=False, na=False) |
+                        operations_sheet_data_preprocess['Author Name 3'].str.contains(selected_author, case=False, na=False) |
+                        operations_sheet_data_preprocess['Author Name 4'].str.contains(selected_author, case=False, na=False))
+    filtered_data = operations_sheet_data_preprocess[mask][['Book ID', 'Book Title', 'Date', 'No of Author','Author Name 1',
+                                                            'Author Name 2', 'Author Name 3', 'Author Name 4', 'Position 1',
+                                                            'Position 2', 'Position 3', 'Position 4','Contact No. 1', 
+                                                            'Contact No. 2', 'Contact No. 3', 'Contact No. 4']]
+    date_columns = [col for col in filtered_data.columns if 'Date' in col]
+    for col in date_columns:
+        filtered_data[col] = pd.to_datetime(filtered_data[col], errors='coerce')
+        filtered_data[col] = filtered_data[col].dt.strftime('%d %B %Y')
+    st.caption(f"{len(filtered_data)} Books by {selected_author}")
+    st.dataframe(filtered_data, use_container_width=True, hide_index=True)
+
 
 
 #####################################################################################################
