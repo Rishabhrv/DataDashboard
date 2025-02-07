@@ -98,8 +98,7 @@ if 'first_visit' not in st.session_state:
     st.session_state.first_visit = True 
 
 # Check if the user is new
-if not st.session_state.visited:
-    st.toast("New Data is being fetched..", icon="ℹ️")  # Notify user
+if not st.session_state.visited: 
     st.cache_data.clear()  # Clear cache for new visitors
     st.session_state.visited = True  # Mark as visited
 
@@ -1018,7 +1017,7 @@ with col2:
 
 
 #####################################################################################################
-#####################-----------  Top 10 Authors From 2024 ----------######################
+#####################-----------  Top 15 Authors From 2024 ----------######################
 ####################################################################################################
 
 authors_name  = operations_sheet_data_preprocess[['Author Name 1', 
@@ -1029,7 +1028,9 @@ authors_name  = operations_sheet_data_preprocess[['Author Name 1',
 unique_authors = pd.Series(authors_name).dropna().value_counts().reset_index()
 unique_authors.columns = ['Author Name', 'Book Count']
 
-top15_authors = unique_authors[~unique_authors['Author Name'].isin(['TRUE', 'FALSE', 'CP'])].sort_values('Book Count', ascending=False).head(10)
+top15_authors = unique_authors[~unique_authors['Author Name'].isin(['TRUE', 
+                                                                    'FALSE', 
+                                                                    'CP'])].sort_values('Book Count', ascending=False).head(25)
 
 x_axis = alt.Axis(labelAngle=45, labelOverlap=False)
 # Create a vertical bar chart using Altair
@@ -1055,10 +1056,10 @@ unique_author_chart_text = unique_author_chart.mark_text(
 
 
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1.2, 1])
 
 with col1:
-    st.subheader("👨‍🏫Top 10 Authors of AGPH")
+    st.subheader("🔝25 Authors of AGPH")
     st.altair_chart(unique_author_chart + unique_author_chart_text, use_container_width=True)
 
 
