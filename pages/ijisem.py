@@ -68,6 +68,12 @@ def validate_token():
 
 validate_token()
 
+user_role = st.session_state.get("role", "Guest")
+
+if user_role != "Admin":    
+    st.error("Access Denied: Admin Role Required")
+    st.stop()
+
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
     st.session_state.visited = False

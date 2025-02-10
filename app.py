@@ -17,6 +17,7 @@ import hashlib
 import hmac
 import time
 
+
 # Set page configuration
 st.set_page_config(
     menu_items={
@@ -37,6 +38,7 @@ hide_menu_style = """
     footer {visibility: hidden;}
     </style>
 """
+
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 # Define API URL and secure API key
@@ -88,6 +90,12 @@ def validate_token():
         st.stop()
 
 validate_token()
+
+user_role = st.session_state.get("role", "Guest")
+
+if user_role != "Admin":    
+    st.error("Access Denied: Admin Role Required")
+    st.stop()
 
 # Initialize session state for new visitors
 if "visited" not in st.session_state:
@@ -194,7 +202,7 @@ with col2:
         
 with col3:
         if adsearch_url:
-            st.page_link(adsearch_url, label="Seach Books", icon="🔎")
+            st.page_link(adsearch_url, label="Search Books", icon="🔎")
 
     
 ######################################################################################
@@ -886,7 +894,44 @@ with col2:
     st.altair_chart((line_chart_number_book+text_line_chart_number_book), use_container_width=True,theme="streamlit")
 
 
+###################################################################################################################
+#####################----------- Dilevered books----------###############################################
+#####################################################################################################################
 
+
+# Display the last 45 days data section with count, emoji, and title
+st.markdown(
+    f"<h5>📅 Delivered Books"
+    f"<span class='status-badge'>Status: Delivered!</span></h5>", 
+    unsafe_allow_html=True
+)
+delivered_books = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Deliver'] == 'TRUE']
+
+unique_dilever_year = delivered_books['Year'].unique()[~np.isnan(delivered_books['Year'].unique())]
+
+delivered_books_selected_year = st.pills("2024", unique_dilever_year, selection_mode="single", 
+                              default = unique_dilever_year[-1],label_visibility ='collapsed')
+
+
+delivered_books_filter = delivered_books[delivered_books['Year']==delivered_books_selected_year]
+
+date_columns = [col for col in delivered_books_filter.columns if 'Date' in col]
+for col in date_columns:
+    delivered_books_filter[col] = pd.to_datetime(delivered_books_filter[col], errors='coerce')
+    delivered_books_filter[col] = delivered_books_filter[col].dt.strftime('%d %B %Y')
+
+delivered_books_filter = delivered_books_filter[['Book ID', 'Book Title', 'Date', 'No of Author','Author Name 1',
+       'Author Name 2', 'Author Name 3', 'Author Name 4', 'Position 1',
+       'Position 2', 'Position 3', 'Position 4','Writing Complete', 'Writing By', 'Writing Start Date',
+       'Writing Start Time', 'Writing End Date', 'Writing End Time',
+       'Proofreading Complete', 'Proofreading By', 'Proofreading Start Date',
+       'Proofreading Start Time', 'Proofreading End Date',
+       'Proofreading End Time', 'Formating Complete', 'Formating By',
+       'Formating Start Date', 'Formating Start Time', 'Formating End Date',
+       'Formating End Time',]]
+
+st.markdown(f"##### 📋 {len(delivered_books_filter)} Books Delivered in {delivered_books_selected_year}")
+st.dataframe(delivered_books_filter, use_container_width=True, hide_index=True)
 
 ####################################################################################################
 #####################-----------  Line Chart Monthly Books & Authors ----------######################
@@ -1017,7 +1062,7 @@ with col2:
 
 
 #####################################################################################################
-#####################-----------  Top 15 Authors From 2024 ----------######################
+#####################-----------  Top 25 Authors From 2024 ----------######################
 ####################################################################################################
 
 authors_name  = operations_sheet_data_preprocess[['Author Name 1', 
@@ -1455,6 +1500,3 @@ with col2:
 
 # # Display the streamed summary at the top
 # summary_placeholder.write_stream(summary_generator())
-
-
-
