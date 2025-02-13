@@ -260,3 +260,70 @@ def get_monthly_book_author_counts(df,month_order):
     except AttributeError as e:
         print(f"Error: Likely a problem with the 'Date' column format. Ensure it's datetime. Details: {e}")
         return pd.DataFrame(columns=['Month', 'Total Books', 'Total Authors']) # Return empty DataFrame if error
+    
+
+####################################################################################################
+#####################-----------  Operation Durations ----------######################
+###################################################################################################
+
+
+def parse_datetime(date_obj, time_str):
+    """
+    Combines a datetime date (date_obj) with a time string (time_str) into a full datetime object.
+    Handles missing (NA) values and unexpected formats safely.
+    
+    Parameters:
+        date_obj (datetime): A datetime object representing the date.
+        time_str (str or pd.NA): A string representing the time, e.g., "11:07".
+    
+    Returns:
+        datetime or pd.NaT: The combined datetime object or NaT if time_str is missing or invalid.
+    """
+    if pd.isna(time_str) or not isinstance(time_str, str):
+        return pd.NaT  # Handle missing or non-string values
+    
+    # Ensure the time is in the expected "HH:MM" format
+    if not time_str.strip().replace(":", "").isdigit() or ":" not in time_str:
+        #print(f"Skipping invalid time: {time_str}")  # Debugging statement
+        return pd.NaT  # Return NaT for invalid values
+    
+    try:
+        # Split the time string into hours and minutes
+        hour, minute = map(int, time_str.split(':'))
+        
+        # Apply conversion rules based on office hours (9:30 AM - 6:00 PM)
+        if hour in [9, 10, 11]:
+            pass  # AM (unchanged)
+        elif hour == 12:
+            pass  # Noon (unchanged)
+        elif 1 <= hour <= 6:
+            hour += 12  # Convert to PM
+        else:
+            #print(f"Skipping out-of-range time: {time_str}")  # Debugging statement
+            return pd.NaT  # Handle out-of-range values
+
+        # Combine the date with the adjusted time
+        return date_obj.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    
+    except ValueError as e:
+        #print(f"Skipping invalid time format '{time_str}': {e}")  # Debugging statement
+        return pd.NaT  # Handle unexpected errors gracefully
+    
+def format_duration(td):
+    total_seconds = td.total_seconds()
+    days = int(total_seconds // (24 * 3600))
+    hours = int((total_seconds % (24 * 3600)) // 3600)
+    return f"{days} days {hours} hours"
+
+# Function to remove outliers using IQR
+def remove_outliers(df, column):
+    Q1 = df[column].quantile(0.25)  # First quartile (25%)
+    Q3 = df[column].quantile(0.75)  # Third quartile (75%)
+    IQR = Q3 - Q1  # Interquartile range
+    
+    # Define the lower and upper bounds
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    # Filter the data
+    return df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]

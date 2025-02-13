@@ -15,6 +15,15 @@ from preprocessing import *
 from datetime import datetime
 warnings.simplefilter('ignore')
 
+logo = "logo/logo_black.png"
+fevicon = "logo/favicon_black.ico"
+small_logo = "logo/favicon_white.ico"
+
+st.logo(logo,
+size = "large",
+icon_image = small_logo
+)
+
 # Set page configuration
 st.set_page_config(
     layout="wide",  # Set layout to wide mode
@@ -45,6 +54,8 @@ hide_navigation_link_style = """
     """
 
 st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+
 
 load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key') 
@@ -657,7 +668,7 @@ if user_role == 'Proofreader':
     proofreading_bar = alt.Chart(proofreading_num).mark_bar().encode(
         y=alt.Y('Proofreader', sort='-x', title='Proofreader'),  # Change x to y for horizontal bars
         x=alt.X('Book Count', title='Book Count'),  # Change y to x for horizontal bars
-        color=alt.Color('Proofreader', scale=alt.Scale(scheme='blueorange'), legend=None),
+        color=alt.Color('Proofreader', scale=alt.Scale(scheme='darkgreen'), legend=None),
         tooltip=['Proofreader', 'Book Count']
     ).properties(
         #title=f"Books Proofread in {selected_month} {selected_year}"

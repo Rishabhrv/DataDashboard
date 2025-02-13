@@ -18,6 +18,10 @@ import hmac
 import time
 
 
+logo = "logo/logo_black.png"
+fevicon = "logo/favicon_black.ico"
+small_logo = "logo/favicon_white.ico"
+
 # Set page configuration
 st.set_page_config(
     menu_items={
@@ -27,7 +31,7 @@ st.set_page_config(
     },
     layout="wide",  # Set layout to wide mode
     initial_sidebar_state="collapsed",
-    page_icon="chart_with_upwards_trend",  
+    page_icon= small_logo,  
     page_title="AGPH Dashboard",
 )
 
@@ -40,6 +44,11 @@ hide_menu_style = """
 """
 
 st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+st.logo(logo,
+size = "large",
+icon_image = small_logo
+)
 
 # Define API URL and secure API key
 MASTERSHEET_API_URL = "https://agkitdatabase.agvolumes.com/redirect_to_adsearch"
@@ -273,7 +282,8 @@ books_formatted_remaining = operations_sheet_data_preprocess_month[(operations_s
 
 
 books_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Book Complete'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
-books_apply_isbn_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
+books_apply_isbn_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Apply ISBN'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author',
+                                                                                                                                     'Writing Complete','Proofreading Complete','Formating Complete']]
 books_printed_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Print'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author',]]
 books_delivered_remaining = operations_sheet_data_preprocess_month[operations_sheet_data_preprocess_month['Deliver'] != 'TRUE'][['Book ID', 'Book Title', 'Date','No of Author']]
 
@@ -312,7 +322,20 @@ with st.expander("View Remaining Work", expanded=False,icon='⌛'):
         st.dataframe(books_formatted_remaining, use_container_width=True, hide_index=True)
 
     with tab4:
-        st.dataframe(books_apply_isbn_remaining, use_container_width=True, hide_index=True)
+        st.dataframe(books_apply_isbn_remaining, use_container_width=True, hide_index=True,column_config = {
+        "Writing Complete": st.column_config.CheckboxColumn(
+            "Writing Complete",
+            default=False,
+        ),
+        "Proofreading Complete": st.column_config.CheckboxColumn(
+            "Proofreading Complete",
+            default=False,
+        ),
+        "Formating Complete": st.column_config.CheckboxColumn(
+            "Formating Complete",
+            default=False,
+        )
+    })
     
     with tab5:
         st.dataframe(books_printed_remaining, use_container_width=True, hide_index=True)
@@ -472,7 +495,7 @@ st.dataframe(work_done_status, use_container_width=False, hide_index=True, colum
     })
 
 ######################################################################################
-###############----------- Work Remaining status dataframe -------------################
+###############----------- Work Remaining status dataframe -------------##############
 ######################################################################################
 
 
@@ -507,9 +530,32 @@ def proofread_remaining(data):
 
     return data,proof_remaining
 
+def format_remaining(data):
+
+    data['Formating By'] = data['Formating By'].fillna('Pending')
+    data = data[(data['Proofreading Complete'] == 'TRUE') & (data['Formating Complete'] == 'FALSE')][['Book ID', 'Book Title', 
+                                                                                                    'Date','Since Enrolled',
+                                                                                                    'No of Author','Formating By','Writing By',
+                                                                                                    'Writing Start Date', 
+                                                                                                    'Writing Start Time', 
+                                                                                                    'Writing End Date',
+                                                                                                    'Writing End Time','Proofreading By',
+                                                                                                    'Proofreading Start Date',
+                                                                                                    'Proofreading Start Time',
+                                                                                                    'Proofreading End Date',
+                                                                                                    'Proofreading End Time']]
+    format_remaining = data['Book ID'].nunique() - len(results['Formating'])
+
+    date_columns = [col for col in data.columns if 'Date' in col]
+    for col in date_columns:
+        data[col] = data[col].dt.strftime('%d %B %Y')
+
+    return data,format_remaining
+
 
 writing_remaining_data,writing_remaining_count = writing_remaining(operations_sheet_data_preprocess)
 proofread_remaining_data,proofread_remaining_count = proofread_remaining(operations_sheet_data_preprocess)
+format_remaining_data,format_remaining_count = format_remaining(operations_sheet_data_preprocess)
 
 
 # Define two columns to display dataframes side by side
@@ -532,6 +578,39 @@ with col2:
         unsafe_allow_html=True
     )
     st.dataframe(proofread_remaining_data, use_container_width=False, hide_index=True)
+
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown(
+        f"<h5>🖋️ {format_remaining_count} Books Formatting Remaining "
+        f"<span class='status-badge-red'>Status: Remaining</span></h5>", 
+        unsafe_allow_html=True
+    )
+    st.dataframe(format_remaining_data, use_container_width=False, hide_index=True)
+
+with col2:
+    st.markdown(
+        f"<h5>📖 {len(books_apply_isbn_remaining)} Books ISBN Remaining "
+        f"<span class='status-badge-red'>Status: Remaining</span></h5>", 
+        unsafe_allow_html=True
+    )
+    st.dataframe(books_apply_isbn_remaining, use_container_width=False, hide_index=True,column_config = {
+        "Writing Complete": st.column_config.CheckboxColumn(
+            "Writing Complete",
+            default=False,
+        ),
+        "Proofreading Complete": st.column_config.CheckboxColumn(
+            "Proofreading Complete",
+            default=False,
+        ),
+        "Formating Complete": st.column_config.CheckboxColumn(
+            "Formating Complete",
+            default=False,
+        )
+    })
+
 
 
 ####################################################################################################
@@ -611,7 +690,7 @@ cleaned_proofreading_num = proofreading_num[['Proofreader', 'Book Count']]
 proofreading_bar = alt.Chart(proofreading_num).mark_bar().encode(
     y=alt.Y('Proofreader', sort='-x', title='Proofreader'),  # Change x to y for horizontal bars
     x=alt.X('Book Count', title='Book Count'),  # Change y to x for horizontal bars
-    color=alt.Color('Proofreader', scale=alt.Scale(scheme='blueorange'), legend=None),
+    color=alt.Color('Proofreader', scale=alt.Scale(scheme='darkgreen'), legend=None),
     tooltip=['Proofreader', 'Book Count']
 ).properties(
     #title=f"Books Proofread in {selected_month} {selected_year}"
@@ -907,13 +986,7 @@ st.markdown(
 )
 delivered_books = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Deliver'] == 'TRUE']
 
-unique_dilever_year = delivered_books['Year'].unique()[~np.isnan(delivered_books['Year'].unique())]
-
-delivered_books_selected_year = st.pills("2024", unique_dilever_year, selection_mode="single", 
-                              default = unique_dilever_year[-1],label_visibility ='collapsed')
-
-
-delivered_books_filter = delivered_books[delivered_books['Year']==delivered_books_selected_year]
+delivered_books_filter = delivered_books[delivered_books['Year']==selected_year]
 
 date_columns = [col for col in delivered_books_filter.columns if 'Date' in col]
 for col in date_columns:
@@ -930,7 +1003,7 @@ delivered_books_filter = delivered_books_filter[['Book ID', 'Book Title', 'Date'
        'Formating Start Date', 'Formating Start Time', 'Formating End Date',
        'Formating End Time',]]
 
-st.markdown(f"##### 📋 {len(delivered_books_filter)} Books Delivered in {delivered_books_selected_year}")
+st.markdown(f"##### 📋 {len(delivered_books_filter)} Books Delivered in {selected_year}")
 st.dataframe(delivered_books_filter, use_container_width=True, hide_index=True)
 
 ####################################################################################################
@@ -1193,20 +1266,127 @@ bar_data_df = pd.DataFrame(counts).melt(id_vars="Category", var_name="Status", v
 # # Convert to DataFrame
 # author_bar_data_df = pd.DataFrame(author_counts).melt(id_vars="Category", var_name="Status", value_name="Count")
 
-# # Generate the grouped bar charts
-book_bar_chart = create_grouped_bar_chart(bar_data_df, f"Books in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
-# author_bar_chart = create_grouped_bar_chart(author_bar_data_df, f"Authors in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
+# # # Generate the grouped bar charts
+# book_bar_chart = create_grouped_bar_chart(bar_data_df, f"Books in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
+# # author_bar_chart = create_grouped_bar_chart(author_bar_data_df, f"Authors in {selected_month}", color_scheme=["#E14F47", "#7DDA58"])
 
-# Display the charts in Streamlit
-st.subheader(f"📚 Books & Authors in {selected_month}")
-with st.container():
-    _, col1, col2, _ = st.columns([0.009, 1, 1, 0.009])
-    with col1:
-        st.altair_chart(book_bar_chart, use_container_width=True)
-    with col2:
-        st.write("New Graph comming soon!😊")
-        #st.altair_chart(author_bar_chart, use_container_width=True)
+# # Display the charts in Streamlit
+# st.subheader(f"📚 Books & Authors in {selected_month}")
+# with st.container():
+#     _, col1, col2, _ = st.columns([0.009, 1, 1, 0.009])
+#     with col1:
+#         st.altair_chart(book_bar_chart, use_container_width=True)
+#     with col2:
+#         st.write("New Graph comming soon!😊")
+#         #st.altair_chart(author_bar_chart, use_container_width=True)
 
+
+#######################################################################################################
+###################-------------  Employee Duration Performance----------##################
+#######################################################################################################
+
+operations_sheet_data_preprocess_year_duration = operations_sheet_data_preprocess[operations_sheet_data_preprocess['Year']== selected_year]
+
+operations_sheet_data_preprocess_year_duration['writing_start_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Writing Start Date'], row['Writing Start Time']),
+    axis=1
+)
+
+operations_sheet_data_preprocess_year_duration['writing_end_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Writing End Date'], row['Writing End Time']), axis=1
+)
+
+operations_sheet_data_preprocess_year_duration['proofreading_start_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Proofreading Start Date'], row['Proofreading Start Time']), axis=1
+)
+
+operations_sheet_data_preprocess_year_duration['proofreading_end_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Proofreading End Date'], row['Proofreading End Time']), axis=1
+)
+
+operations_sheet_data_preprocess_year_duration['formatting_start_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Formating Start Date'], row['Formating Start Time']), axis=1
+)
+
+operations_sheet_data_preprocess_year_duration['formatting_end_dt'] = operations_sheet_data_preprocess_year_duration.apply(
+    lambda row: parse_datetime(row['Formating End Date'], row['Formating End Time']), axis=1
+)
+
+employee_year_duration = operations_sheet_data_preprocess_year_duration[operations_sheet_data_preprocess_year_duration['Writing By'] != 'Publish Only']
+employee_year_duration['writing_duration'] = employee_year_duration['writing_end_dt'] - employee_year_duration['writing_start_dt']
+employee_year_duration['prooreading_duration'] = employee_year_duration['proofreading_end_dt'] - employee_year_duration['proofreading_start_dt']
+employee_year_duration['formatting_duration'] = employee_year_duration['formatting_end_dt'] - employee_year_duration['formatting_start_dt']   
+employee_year_duration['toal_duration'] = employee_year_duration['formatting_end_dt'] - employee_year_duration['writing_start_dt']
+
+writing_performance_employee_filtered = remove_outliers(employee_year_duration, 'writing_duration')
+writing_performance_employee = writing_performance_employee_filtered.groupby('Writing By')['writing_duration'].mean().sort_values().reset_index().dropna()
+writing_performance_employee["formatted_duration"] = writing_performance_employee["writing_duration"].apply(format_duration)
+writing_performance_employee = writing_performance_employee.sort_values(by = 'writing_duration', ascending = False)
+
+proofread_performance_employee_filtered = remove_outliers(employee_year_duration, 'prooreading_duration')
+proofread_performance_employee = proofread_performance_employee_filtered.groupby('Proofreading By')['prooreading_duration'].mean().sort_values().reset_index().dropna()
+proofread_performance_employee["formatted_duration"] = proofread_performance_employee["prooreading_duration"].apply(format_duration)
+proofread_performance_employee = proofread_performance_employee.sort_values(by = 'prooreading_duration', ascending = False)
+
+format_performance_employee_filtered = remove_outliers(employee_year_duration, 'formatting_duration')
+format_performance_employee = format_performance_employee_filtered.groupby('Formating By')['formatting_duration'].mean().sort_values().reset_index().dropna()
+format_performance_employee["formatted_duration"] = format_performance_employee["formatting_duration"].apply(format_duration)
+format_performance_employee = format_performance_employee.sort_values(by = 'formatting_duration', ascending = False)
+
+
+# Plot using the formatted duration
+wrtitng_fig = px.bar(
+    writing_performance_employee,
+    x="Writing By",
+    y="writing_duration",  # Keep this for sorting correctly
+    color="Writing By",
+    title = f"Average Writing Duration by each team member in {selected_year}",
+    labels={"writing_duration": "Writing Duration (days)",
+            "Writing By" : "Team Members"},
+    text=writing_performance_employee["formatted_duration"]
+)
+
+wrtitng_fig.update_traces(textposition="outside")  # Show text labels outside the bars
+
+
+proof_fig = px.bar(
+    proofread_performance_employee,
+    x="Proofreading By",
+    y="prooreading_duration",  # Keep this for sorting correctly
+    color="Proofreading By",
+    title = f"Average Proofread Duration by each team member in {selected_year}",
+    labels={"prooreading_duration": "Proofread Duration (days)",
+            "Proofreading By" : "Team Members"},
+    text=proofread_performance_employee["formatted_duration"]
+)
+
+proof_fig.update_traces(textposition="outside")  # Show text labels outside the bars
+
+
+format_fig = px.bar(
+    format_performance_employee,
+    x="Formating By",
+    y="formatting_duration",  # Keep this for sorting correctly
+    color="Formating By",
+    title = f"Average Format Duration by each team member in {selected_year}",
+    labels={"formatting_duration": "Formatting Duration (days)",
+            "Formating By" : "Team Members"},
+    text=format_performance_employee["formatted_duration"]
+)
+
+format_fig.update_traces(textposition="outside")  # Show text labels outside the bars
+
+
+st.subheader(f"📝 Content Team Performance in {selected_year}")
+st.plotly_chart(wrtitng_fig)
+col1, col2 = st.columns(2)
+
+with col1:
+    st.plotly_chart(proof_fig)
+with col2:
+    st.plotly_chart(format_fig)
+
+    
 #######################################################################################################
 ###################------------- Horizonrtal bar graph Employee Performance----------##################
 #######################################################################################################
@@ -1266,8 +1446,6 @@ yearly_chart = (yearly_bars + yearly_text).properties(
     height=400
 )
 
-# Display charts side by side in Streamlit
-st.subheader(f"📝 Content Team Performance in {selected_year}")
 #st.caption("Content Team performance in each month and in 2024")
 col1, col2 = st.columns(2)
 
