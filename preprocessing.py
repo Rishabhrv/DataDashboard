@@ -27,6 +27,7 @@ gc = gspread.authorize(credentials)
 ######################################################################################
 
 # Fetch data from a Google Sheet
+@st.cache_data(show_spinner=False)
 def sheet_to_df(sheet_id):
     worksheet = gc.open_by_key(sheet_id).sheet1
     data = worksheet.get_all_records()
