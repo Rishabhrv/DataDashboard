@@ -145,9 +145,9 @@ from datetime import datetime, timedelta
 
 current_year = datetime.now().year
 # Get the current month name
-current_month = datetime.now().strftime("%B")
-# Get the previous month name
-previous_month = (datetime.now() - timedelta(days=datetime.now().day)).strftime("%B")
+# current_month = datetime.now().strftime("%B")
+# # Get the previous month name
+# previous_month = (datetime.now() - timedelta(days=datetime.now().day)).strftime("%B")
 
 # Map month numbers to month names and set the order
 month_order = [
@@ -159,7 +159,7 @@ operations_sheet_data_preprocess_year = operations_sheet_data_preprocess[operati
 unique_months_selected_year = operations_sheet_data_preprocess_year['Month'].unique() 
 
 
-selected_month = st.pills("2024", [previous_month,current_month], selection_mode="single", 
+selected_month = st.pills("2024", unique_months_selected_year, selection_mode="single", 
                         default =unique_months_selected_year[-1],label_visibility ='collapsed')
 
 user_role = st.session_state.get("role", "Guest")
