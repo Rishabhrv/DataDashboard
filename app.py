@@ -406,9 +406,11 @@ conditions = {
 results = {}
 for key, cond in conditions.items():
     # Filter the data and select columns, creating a copy to avoid modifying the original DataFrame
-    current_data = operations_sheet_data_preprocess[(operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & 
-                                                    (operations_sheet_data_preprocess[cond['status']] == 'FALSE')
-                                                    ][cond['columns']].copy()
+    current_data = operations_sheet_data_preprocess[
+    (operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & 
+    ((operations_sheet_data_preprocess[cond['status']] == 'FALSE') | 
+     (operations_sheet_data_preprocess[cond['status']].isna()))
+][cond['columns']].copy()
     
     # Format 'Date' columns in the copy to remove the time part
     date_columns = [col for col in current_data.columns if 'Date' in col]

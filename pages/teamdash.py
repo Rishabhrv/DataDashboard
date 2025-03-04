@@ -465,7 +465,6 @@ if user_role == 'Content Writer':
         st.altair_chart(yearly_chart, use_container_width=True)
     
     if st.session_state.first_visit:
-        st.balloons()
         st.session_state.first_visit = False
 
 
@@ -520,9 +519,11 @@ if user_role == 'Proofreader':
     results = {}
     for key, cond in conditions.items():
         # Filter the data and select columns, creating a copy to avoid modifying the original DataFrame
-        current_data = operations_sheet_data_preprocess[(operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & 
-                                                        (operations_sheet_data_preprocess[cond['status']] == 'FALSE')
-                                                        ][cond['columns']].copy()
+        current_data = operations_sheet_data_preprocess[
+                (operations_sheet_data_preprocess[f'{key} By'].isin(cond['by'])) & 
+                ((operations_sheet_data_preprocess[cond['status']] == 'FALSE') | 
+                (operations_sheet_data_preprocess[cond['status']].isna()))
+            ][cond['columns']].copy()
         
         # Format 'Date' columns in the copy to remove the time part
         date_columns = [col for col in current_data.columns if 'Date' in col]
@@ -711,5 +712,4 @@ if user_role == 'Proofreader':
             #st.plotly_chart(proofreading_donut, use_container_width=True)
 
     if st.session_state.first_visit:
-        st.balloons()
         st.session_state.first_visit = False
