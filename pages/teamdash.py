@@ -55,6 +55,20 @@ hide_navigation_link_style = """
 
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
+st.markdown("""
+    <style>
+            
+        /* Remove Streamlit's default top padding */
+        .main > div {
+            padding-top: 0px !important;
+        }
+        /* Ensure the first element has minimal spacing */
+        .block-container {
+            padding-top: 10px !important;  /* Small padding for breathing room */
+        }
+            
+    </style>
+""", unsafe_allow_html=True)
 
 
 load_dotenv()
@@ -161,8 +175,6 @@ unique_months_selected_year = operations_sheet_data_preprocess_year['Month'].uni
 
 selected_month = st.pills("2024", unique_months_selected_year, selection_mode="single", 
                         default =unique_months_selected_year[-1],label_visibility ='collapsed')
-
-user_role = st.session_state.get("role", "Guest")
 
 # Filter DataFrame based on selected month
 operations_sheet_data_preprocess_month = operations_sheet_data_preprocess_year[operations_sheet_data_preprocess_year['Month']== selected_month]
@@ -465,6 +477,7 @@ if user_role == 'Content Writer':
         st.altair_chart(yearly_chart, use_container_width=True)
     
     if st.session_state.first_visit:
+        st.balloons()
         st.session_state.first_visit = False
 
 
@@ -712,4 +725,5 @@ if user_role == 'Proofreader':
             #st.plotly_chart(proofreading_donut, use_container_width=True)
 
     if st.session_state.first_visit:
+        st.balloons()
         st.session_state.first_visit = False
