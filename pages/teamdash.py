@@ -190,7 +190,7 @@ books_written_true = operations_sheet_data_preprocess_month[operations_sheet_dat
 ##################################################################################################################################
 
 
-if user_role == 'Content Writer':
+if user_role == 'Writer':
     st.caption(f"Welcome, {st.session_state.user}!")
     
 
@@ -490,7 +490,7 @@ if user_role == 'Content Writer':
 
 
 
-if user_role == 'Proofreader':
+if user_role == 'proofreader':
     st.caption(f"Welcome, {st.session_state.user}!")
 
     st.subheader(f"Metrics of {selected_month}")

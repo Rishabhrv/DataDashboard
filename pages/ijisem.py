@@ -100,6 +100,7 @@ month_order = [
 
 unique_year = ijisem_sheet_data_preprocess['Year'].unique()[~np.isnan(ijisem_sheet_data_preprocess['Year'].unique())]
 unique_year = unique_year.astype(int)
+unique_year = sorted(unique_year.astype(int))
 
 col1, col2 = st.columns([2, 8])  # Adjust column widths as needed
 
