@@ -118,7 +118,7 @@ validate_token()
 
 user_role = st.session_state.get("role", "Guest")
 
-if user_role in ['Content Writer', 'Proofreader']:
+if user_role in ['proofreader', 'Writer']:
     st.markdown(hide_sidebar_style, unsafe_allow_html=True)
     st.markdown(hide_navigation_link_style, unsafe_allow_html=True)
 
