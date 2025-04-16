@@ -55,20 +55,20 @@ hide_navigation_link_style = """
 
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-st.markdown("""
-    <style>
+# st.markdown("""
+#     <style>
             
-        /* Remove Streamlit's default top padding */
-        .main > div {
-            padding-top: 0px !important;
-        }
-        /* Ensure the first element has minimal spacing */
-        .block-container {
-            padding-top: 10px !important;  /* Small padding for breathing room */
-        }
+#         /* Remove Streamlit's default top padding */
+#         .main > div {
+#             padding-top: 0px !important;
+#         }
+#         /* Ensure the first element has minimal spacing */
+#         .block-container {
+#             padding-top: 10px !important;  /* Small padding for breathing room */
+#         }
             
-    </style>
-""", unsafe_allow_html=True)
+#     </style>
+# """, unsafe_allow_html=True)
 
 
 load_dotenv()
